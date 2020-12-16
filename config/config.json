@@ -1,0 +1,13 @@
+{
+    "net": {
+        "localPrivateKey": "a104534c3a9aa3fdb6365481afdd968a5eca61a358822f63afc391ac9f659905",
+        "publicKey": "049055045e7ee2201563e98143cea1fb57925531899c1b865f90eef5abadd70425e429a87915ab18556f589c6044527943c2fa0c617d15649ef6a15bc14ad84ee5",
+        "ip": "127.0.0.1",
+        "servicePort" : 30000,
+        "seed": [],
+        "networkid": 1
+    },
+    "dao" : {
+        "datadir": "D:\\projects\\GOPATH\\src\\github.com\\cnf_core\\data"
+    }
+}
