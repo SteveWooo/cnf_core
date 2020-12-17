@@ -91,7 +91,7 @@ func processUdpData(chanel chan string, udpConn *net.UDPConn) interface{} {
 	}
 	message := string(data[:length])
 
-	// 把消息推送到消息队列中。只有队列不满的情况下，这条协程才会被释放掉
+	// 把消息推送到消息队列中。只有队列不满的情况下，这条协程才会往下走
 	chanel <- message
 
 	// 当数据确实推送到消息队列后，才能释放这条协程，创建新的监听UDP数据的协程。

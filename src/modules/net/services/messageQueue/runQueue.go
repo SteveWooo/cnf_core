@@ -2,6 +2,7 @@ package messageQueue
 
 import (
 	logger "github.com/cnf_core/src/utils/logger"
+	discoverService "github.com/cnf_core/src/modules/net/services/discover"
 )
 
 func Build (){
@@ -26,5 +27,13 @@ func handleDiscoverMsg (chanel chan string) {
 		logger.Debug(msg)
 
 		// 这里作为处理发现服务消息的主入口
+		jsonMsg, parseErr := discoverService.ParsePackage(msg)
+		if parseErr != nil {
+			// 不处理
+			logger.Warn(parseErr.(map[string]interface{})["message"])
+			continue 
+		}
+
+		logger.Debug(jsonMsg)
 	}
 }
