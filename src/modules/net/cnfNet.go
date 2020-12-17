@@ -7,6 +7,8 @@ import (
 	discoverService "github.com/cnf_core/src/modules/net/services/discover"
 
 	messageQueue "github.com/cnf_core/src/modules/net/services/messageQueue"
+
+	sign "github.com/cnf_core/src/utils/sign"
 )
 
 func Build() interface{}{
@@ -38,6 +40,9 @@ func Run() interface{}{
 	go messageQueue.Run(map[string]chan string {
 		"discoverChanel" : discoverChanel,
 	})
+
+	keys := sign.GenKeys()
+	logger.Debug(keys)
 
 	return nil
 }

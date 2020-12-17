@@ -1,14 +1,20 @@
 package sign
 
 import (
-	
+	"encoding/hex"
+	btcec "github.com/cnf_core/pkg/btcec"
+	logger "github.com/cnf_core/src/utils/logger"
 )
 
 /**
  * 获得一个secp256k1公密钥对
  */
  func GenKeys() interface{}{
-
+	pkBytes, _ := hex.DecodeString("22a47fa09a223f2aa079edf85a7c2d4f8720ee63e502ee2869afab7de234b80c")
+	privKey, pubKey := btcec.PrivKeyFromBytes(btcec.S256(), pkBytes)
+	logger.Debug(privKey)
+	logger.Debug(pubKey)
+	
 	return nil
 }
 
@@ -17,7 +23,7 @@ import (
  * @param privateKey string secp256k1密钥
  */
 func GetPublicKey (privateKey string) string{
-
+	
 	return ""
 }
 
