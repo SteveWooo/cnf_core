@@ -5,7 +5,10 @@ import (
 
 	discoverService "github.com/cnf_core/src/modules/net/services/discover"
 	nodeBucket "github.com/cnf_core/src/modules/net/services/nodeBucket"
+	"github.com/cnf_core/src/utils/config"
 	logger "github.com/cnf_core/src/utils/logger"
+	"github.com/cnf_core/src/utils/router"
+	"github.com/cnf_core/src/utils/sign"
 
 	messageQueue "github.com/cnf_core/src/modules/net/services/messageQueue"
 )
@@ -40,10 +43,17 @@ func Run() interface{} {
 		"discoverChanel": discoverChanel,
 	})
 
-	// privateKeyStr := "fe8ae933d351191288dfcfdd1fd032e384e587a1868e568224974cccd92f0228"
+	privateKeyStr := "fe8ae933d351191288dfcfdd1fd032e384e587a1868e568224974cccd92f0221"
 
-	// // pubKey := sign.GetPublicKey(privateKeyStr)
-	// // logger.Debug(pubKey)
+	pubKey := sign.GetPublicKey(privateKeyStr)
+	// logger.Debug(pubKey)
+
+	myPublicKey := config.GetNodeId()
+	logger.Debug(myPublicKey)
+
+	distance := router.CalculateDistance(myPublicKey, pubKey)
+	// distance := router.CalculateDistance("11223455", "22223456")
+	logger.Debug(distance)
 
 	// msg := "helloorld11as1asd23sdasdaasda"
 	// msgSha256Hash := sha256.Sum256([]byte(msg))

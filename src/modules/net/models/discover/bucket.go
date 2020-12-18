@@ -1,8 +1,8 @@
 package discover
 
-var NEW_BUCKET_COUNT int = 16
+var NEW_BUCKET_COUNT int = 64
 var NEW_BUCKET_LENGTH int = 64
-var TRIED_BUCKET_COUNT int = 16
+var TRIED_BUCKET_COUNT int = 64
 var TRIED_BUCKET_LENGTH int = 16
 
 /**
