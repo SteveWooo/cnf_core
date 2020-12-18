@@ -6,17 +6,18 @@ import (
 	// logger "github.com/cnf_core/src/utils/logger"
 )
 
-func Build() {
+func Build(conf interface{}) {
 	// 首先把配置文件, 全局对象之类的初始化好
-	config.Load()
+	config.SetConfig(conf)
 
 	// 网络层入口构建
 	cnfNet.Build()
 }
 
 func Run() {
-	go cnfNet.Run();
+	go cnfNet.Run()
 
-	// 干一些常驻的事情，比如监听各个协程的状态
-	for {}
+	// 常驻，监听各个协程的状态
+	for {
+	}
 }

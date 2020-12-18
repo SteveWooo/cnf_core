@@ -2,16 +2,15 @@ package net
 
 import (
 	// error "github.com/cnf_core/src/utils/error"
-	logger "github.com/cnf_core/src/utils/logger"
-	nodeBucket "github.com/cnf_core/src/modules/net/services/nodeBucket"
+
 	discoverService "github.com/cnf_core/src/modules/net/services/discover"
+	nodeBucket "github.com/cnf_core/src/modules/net/services/nodeBucket"
+	logger "github.com/cnf_core/src/utils/logger"
 
 	messageQueue "github.com/cnf_core/src/modules/net/services/messageQueue"
-
-	sign "github.com/cnf_core/src/utils/sign"
 )
 
-func Build() interface{}{
+func Build() interface{} {
 	// 路由桶的初始化
 	nodeBucket.Build()
 
@@ -20,29 +19,46 @@ func Build() interface{}{
 
 	// 消息队列初始化
 	messageQueue.Build()
-	
+
 	return nil
 }
 
 /**
  * 运行cnf网络
  */
-func Run() interface{}{
+func Run() interface{} {
 	// 初始化所有管道
-	discoverChanel := make(chan string, 5)
+	discoverChanel := make(chan map[string]string, 5)
 
 	logger.Info("正在启动Cnf网络组件...")
-	
+
 	// 启动发现服务
 	go discoverService.Run(discoverChanel)
 
 	// 启动消息队列
-	go messageQueue.Run(map[string]chan string {
-		"discoverChanel" : discoverChanel,
+	go messageQueue.Run(map[string]chan map[string]string{
+		"discoverChanel": discoverChanel,
 	})
 
-	keys := sign.GenKeys()
-	logger.Debug(keys)
+	// privateKeyStr := "fe8ae933d351191288dfcfdd1fd032e384e587a1868e568224974cccd92f0228"
+
+	// // pubKey := sign.GetPublicKey(privateKeyStr)
+	// // logger.Debug(pubKey)
+
+	// msg := "helloorld11as1asd23sdasdaasda"
+	// msgSha256Hash := sha256.Sum256([]byte(msg))
+	// msgHash := hex.EncodeToString(msgSha256Hash[:])
+	// // // logger.Debug(msgHash)
+
+	// signature, _ := sign.Sign(msgHash, privateKeyStr)
+	// logger.Debug(signature)
+	// logger.Debug(len(signature))
+	// // logger.Debug("===============")
+	// // // verified := sign.Verify(signature, msgHash, pubKey)
+	// // // logger.Debug(verified)
+	// // // logger.Debug("===============")
+	// // recoverPublicKey, _ := sign.Recover(signature, msgHash, 0)
+	// // logger.Debug(recoverPublicKey)
 
 	return nil
 }

@@ -2,21 +2,24 @@ package config
 
 import (
 	json "encoding/json"
-	os "os"
 	ioutil "io/ioutil"
+	os "os"
 	filepath "path/filepath"
 
-	logger "github.com/cnf_core/src/utils/logger"
+	error "github.com/cnf_core/src/utils/error"
+	"github.com/cnf_core/src/utils/sign"
 )
 
 var config interface{}
 
 // 载入全局配置
-func loadConfig (){
+func loadConfig() (interface{}, interface{}) {
 	configFilePath := GetArg("configure")
 	if configFilePath == "" {
-		logger.Error("missing console argv: configure")
-		return 
+		// logger.Error("missing console argv: configure")
+		return nil, error.New(map[string]interface{}{
+			"message": "缺乏控制台参数：configure",
+		})
 	}
 
 	// 判断输入参数是绝对路径还是相对路径, 相对路径的起点是可执行文件的当前目录
@@ -26,8 +29,11 @@ func loadConfig (){
 		// 获取当前目录
 		executablePath, exError := os.Executable()
 		if exError != nil {
-			logger.Error(exError)
-			return
+			// logger.Error(exError)
+			return nil, error.New(map[string]interface{}{
+				"message":   "获取当前执行文件目录失败",
+				"originErr": exError,
+			})
 		}
 		executableDir := filepath.Dir(executablePath)
 
@@ -40,13 +46,30 @@ func loadConfig (){
 
 	// 配置文件map存放地儿
 	deCodeError := json.Unmarshal(configFile, &config)
-	
+
 	if deCodeError != nil {
-		logger.Error(deCodeError)
-		return 
+		// logger.Error(deCodeError)
+		return nil, error.New(map[string]interface{}{
+			"message":   "JSON解析失败",
+			"originErr": deCodeError,
+		})
 	}
+
+	return config, nil
 }
 
 func GetConfig() interface{} {
 	return config
+}
+
+func GetNodeId() string {
+	conf := GetConfig()
+	confNet := conf.(map[string]interface{})["net"]
+	nodeId := sign.GetPublicKey(confNet.(map[string]interface{})["localPrivateKey"].(string))
+
+	return nodeId
+}
+
+func SetConfig(conf interface{}) {
+	config = conf
 }

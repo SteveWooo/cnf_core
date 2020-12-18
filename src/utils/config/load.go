@@ -1,10 +1,11 @@
 package config
 
 // config 包的入口
-func Load(){
+func Load() (interface{}, interface{}) {
 	// 载入控制台参数
 	loadArgs()
 
 	// 载入配置文件
-	loadConfig()
+	conf, loadErr := loadConfig()
+	return conf, loadErr
 }
