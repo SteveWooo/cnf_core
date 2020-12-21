@@ -10,19 +10,20 @@ import (
 	"github.com/cnf_core/src/utils/sign"
 )
 
+// Shaker 握手对象handle
 type Shaker struct {
-	NodeId     string
+	NodeID     string
 	SocketConn *net.UDPConn
 }
 
-// 必须使用指针，不然改不了数值
-func (s *Shaker) SetNodeId(nodeId string) {
-	s.NodeId = nodeId
+// SetNodeID 必须使用指针，不然改不了数值
+func (s *Shaker) SetNodeID(nodeID string) {
+	s.NodeID = nodeID
 }
 
+// SetSocketConn 把socket设置进来
 func (s *Shaker) SetSocketConn(socketConn *net.UDPConn) {
 	s.SocketConn = socketConn
-	// logger.Debug(s.SocketConn)
 }
 
 func buildBody(packType string) (string, interface{}) {
@@ -43,14 +44,14 @@ func buildBody(packType string) (string, interface{}) {
 		},
 	}
 
-	msgJson, msgJsonMarshalErr := json.Marshal(msgSource)
-	if msgJsonMarshalErr != nil {
+	msgJSON, msgJSONMarshalErr := json.Marshal(msgSource)
+	if msgJSONMarshalErr != nil {
 		return "", error.New(map[string]interface{}{
-			"message": "系统错误。shaker.go DoPong msgJsonMarshalErr",
+			"message": "系统错误。shaker.go DoPong msgJSONMarshalErr",
 		})
 	}
 
-	msg := string(msgJson)
+	msg := string(msgJSON)
 	msgHash := sign.Hash(msg)
 
 	// 之后还要签名
@@ -78,13 +79,13 @@ func buildBody(packType string) (string, interface{}) {
 		"signature": signature,
 	}
 
-	bodyJson, bodyJsonMarshalErr := json.Marshal(bodySource)
-	if bodyJsonMarshalErr != nil {
+	bodyJSON, bodyJSONMarshalErr := json.Marshal(bodySource)
+	if bodyJSONMarshalErr != nil {
 		return "", error.New(map[string]interface{}{
-			"message": "系统错误。shaker.go DoPong bodyJsonMarshalErr",
+			"message": "系统错误。shaker.go DoPong bodyJSONMarshalErr",
 		})
 	}
-	body := string(bodyJson)
+	body := string(bodyJSON)
 	return body, nil
 }
 

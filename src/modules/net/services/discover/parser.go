@@ -7,19 +7,18 @@ import (
 	"github.com/cnf_core/src/utils/sign"
 )
 
-/**
- * 负责解析接收到的UDP数据包
- * TODO 检查networkid、字段合法性、签名合法性问题
- * @param data 从socket缓冲区中读取到的udp数据包
- */
-func ParsePackage(udpData map[string]string) (interface{}, interface{}) {
+// ParsePackage 负责解析接收到的UDP数据包
+// @param data 从socket缓冲区中读取到的udp数据包
+// TODO 检查networkid、字段合法性、签名合法性问题
+func ParsePackage(udpData map[string]interface{}) (interface{}, *error.Error) {
 	// 包含头部的数据报文
 	data := make(map[string]interface{})
 	// 数据报文的主题内容
 	var body interface{}
 
 	// 首先把数据报文Json序列化
-	jsonUnMarshalErr := json.Unmarshal([]byte(udpData["message"]), &body)
+	udpDataMessage, _ := udpData["message"].(string)
+	jsonUnMarshalErr := json.Unmarshal([]byte(udpDataMessage), &body)
 	if jsonUnMarshalErr != nil {
 		return nil, error.New(map[string]interface{}{
 			"message":   "接收到不合法的UDP数据包",
@@ -35,18 +34,23 @@ func ParsePackage(udpData map[string]string) (interface{}, interface{}) {
 
 	// 获取nodeId
 	recoverPublicKey, _ := sign.Recover(signature.(string), messageHash, uint64(rcid))
-	body.(map[string]interface{})["nodeId"] = recoverPublicKey
-
-	// 然后把Msg部分Json反序列化
-	var msgJson interface{}
-	msgJsonUnMarshalErr := json.Unmarshal([]byte(msg), &msgJson)
-	if msgJsonUnMarshalErr != nil {
+	body.(map[string]interface{})["nodeID"] = recoverPublicKey
+	if recoverPublicKey == "" {
 		return nil, error.New(map[string]interface{}{
-			"message":   "接收到不合法的msg内容",
-			"originErr": msgJsonUnMarshalErr,
+			"message": "接收到不合法的msg内容，无法解析NodeID",
 		})
 	}
-	body.(map[string]interface{})["msgJson"] = msgJson
+
+	// 然后把Msg部分Json反序列化
+	var msgJSON interface{}
+	msgJSONUnMarshalErr := json.Unmarshal([]byte(msg), &msgJSON)
+	if msgJSONUnMarshalErr != nil {
+		return nil, error.New(map[string]interface{}{
+			"message":   "接收到不合法的msg内容",
+			"originErr": msgJSONUnMarshalErr,
+		})
+	}
+	body.(map[string]interface{})["msgJSON"] = msgJSON
 
 	data["body"] = body
 	data["sourceIP"] = udpData["sourceIP"]

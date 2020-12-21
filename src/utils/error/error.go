@@ -12,11 +12,17 @@ type Error struct {
 	originErr interface{}
 }
 
+// GetMessage 获取错误信息
+func (e *Error) GetMessage() string {
+	return e.message
+}
+
 func typeof(obj interface{}) string {
 	return fmt.Sprintf("%T", obj)
 }
 
-func New(info map[string]interface{}) Error {
+// New 创建一个错误对象
+func New(info map[string]interface{}) *Error {
 	var error Error
 	logger.Error(info["message"].(string))
 	if info["message"] != nil {
@@ -28,5 +34,5 @@ func New(info map[string]interface{}) Error {
 		logger.Error(info["originErr"])
 	}
 
-	return error
+	return &error
 }

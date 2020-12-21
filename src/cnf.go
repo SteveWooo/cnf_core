@@ -6,6 +6,7 @@ import (
 	// logger "github.com/cnf_core/src/utils/logger"
 )
 
+// Build 主程序配置入口
 func Build(conf interface{}) {
 	// 首先把配置文件, 全局对象之类的初始化好
 	config.SetConfig(conf)
@@ -14,10 +15,16 @@ func Build(conf interface{}) {
 	cnfNet.Build()
 }
 
+// Run 主程序入口
 func Run() {
 	go cnfNet.Run()
 
 	// 常驻，监听各个协程的状态
-	for {
+
+	// 挂起主协程
+	c := make(chan bool)
+	d := <-c
+	if d {
+		return
 	}
 }

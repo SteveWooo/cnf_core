@@ -1,6 +1,6 @@
 package config
 
-// config 包的入口
+// Load config 包的入口
 func Load() (interface{}, interface{}) {
 	// 载入控制台参数
 	loadArgs()

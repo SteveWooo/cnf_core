@@ -2,8 +2,6 @@ package router
 
 import (
 	"strconv"
-
-	"github.com/cnf_core/src/utils/logger"
 )
 
 func CalculateDistance(nodeId_1 string, nodeId_2 string) int {
@@ -17,8 +15,6 @@ func CalculateDistance(nodeId_1 string, nodeId_2 string) int {
 		base_2, _ := strconv.ParseInt(nodeId_2[i:i+2], 16, 10)
 		sourceId[i/2] = base_1 ^ base_2
 	}
-
-	logger.Debug(sourceId)
 
 	// 计算最远距离，决定存放在哪个桶里
 	bucketCount := 0

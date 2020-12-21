@@ -58,18 +58,36 @@ func loadConfig() (interface{}, interface{}) {
 	return config, nil
 }
 
+// GetConfig 整体获取配置map
 func GetConfig() interface{} {
 	return config
 }
 
-func GetNodeId() string {
+// GetNetSeed 获取配置文件中的种子
+func GetNetSeed() []interface{} {
 	conf := GetConfig()
 	confNet := conf.(map[string]interface{})["net"]
-	nodeId := sign.GetPublicKey(confNet.(map[string]interface{})["localPrivateKey"].(string))
-
-	return nodeId
+	seed := confNet.(map[string]interface{})["seed"].([]interface{})
+	return seed
 }
 
+// GetNetConf 获取网络配置
+func GetNetConf() interface{} {
+	conf := GetConfig()
+	confNet := conf.(map[string]interface{})["net"]
+	return confNet
+}
+
+// GetNodeID 解析出ID
+func GetNodeID() string {
+	conf := GetConfig()
+	confNet := conf.(map[string]interface{})["net"]
+	nodeID := sign.GetPublicKey(confNet.(map[string]interface{})["localPrivateKey"].(string))
+
+	return nodeID
+}
+
+// SetConfig 设置配置项
 func SetConfig(conf interface{}) {
 	config = conf
 }
