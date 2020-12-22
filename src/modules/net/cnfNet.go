@@ -2,7 +2,7 @@ package net
 
 import (
 	// error "github.com/cnf_core/src/utils/error"
-
+	// config "github.com/cnf_core/src/utils/config"
 	discoverService "github.com/cnf_core/src/modules/net/services/discover"
 	nodeBucketService "github.com/cnf_core/src/modules/net/services/nodeBucket"
 	logger "github.com/cnf_core/src/utils/logger"
@@ -57,33 +57,6 @@ func Run() interface{} {
 	go discoverService.RunDiscover(chanels)
 
 	// 开始主动尝试建立连接
-
-	// privateKeyStr := "fe8ae933d351191288dfcfdd1fd032e384e587a1868e568224974cccd92f0221"
-
-	// pubKey := sign.GetPublicKey(privateKeyStr)
-	// // logger.Debug(pubKey)
-
-	// myPublicKey := config.GetNodeId()
-	// logger.Debug(myPublicKey)
-
-	// distance := router.CalculateDistance(myPublicKey, pubKey)
-	// // distance := router.CalculateDistance("11223455", "22223456")
-	// logger.Debug(distance)
-
-	// msg := "helloorld11as1asd23sdasdaasda"
-	// msgSha256Hash := sha256.Sum256([]byte(msg))
-	// msgHash := hex.EncodeToString(msgSha256Hash[:])
-	// // // logger.Debug(msgHash)
-
-	// signature, _ := sign.Sign(msgHash, privateKeyStr)
-	// logger.Debug(signature)
-	// logger.Debug(len(signature))
-	// // logger.Debug("===============")
-	// // // verified := sign.Verify(signature, msgHash, pubKey)
-	// // // logger.Debug(verified)
-	// // // logger.Debug("===============")
-	// // recoverPublicKey, _ := sign.Recover(signature, msgHash, 0)
-	// // logger.Debug(recoverPublicKey)
 
 	return nil
 }

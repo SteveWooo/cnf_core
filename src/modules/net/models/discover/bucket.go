@@ -1,5 +1,15 @@
 package discover
 
+import (
+	"strconv"
+
+	commonModels "github.com/cnf_core/src/modules/net/models/common"
+	config "github.com/cnf_core/src/utils/config"
+	error "github.com/cnf_core/src/utils/error"
+	"github.com/cnf_core/src/utils/logger"
+	"github.com/cnf_core/src/utils/router"
+)
+
 // TODO 这些都加到配置里面8
 var NEW_BUCKET_COUNT int = 64
 var NEW_BUCKET_LENGTH int = 64
@@ -8,19 +18,125 @@ var TRIED_BUCKET_LENGTH int = 16
 
 // Bucket 路由桶
 type Bucket struct {
-	newBucket   map[int]interface{}
-	triedBucket map[int]interface{}
+	newBucket   map[int][]*commonModels.Node
+	triedBucket map[int][]*commonModels.Node
+
+	seed         []*commonModels.Node
+	maxSeedCount int
+}
+
+// GetNewBucket 反射
+func (bucket *Bucket) GetNewBucket() map[int][]*commonModels.Node {
+	return bucket.newBucket
 }
 
 // Build 初始化路由桶
-func (bucket *Bucket) Build() {
-	bucket.newBucket = make(map[int]interface{}) // 初始化数组对象本身
+func (bucket *Bucket) Build(prop map[string]interface{}) {
+	bucket.newBucket = make(map[int][]*commonModels.Node) // 初始化数组对象本身
 	for i := 0; i < NEW_BUCKET_COUNT; i++ {
-		bucket.newBucket[i] = make(map[int]interface{}) // 声明第一个维度每个对象都是一个子数组
+		bucket.newBucket[i] = make([]*commonModels.Node, NEW_BUCKET_LENGTH) // 声明第一个维度每个对象都是一个子数组
 	}
 
-	bucket.triedBucket = make(map[int]interface{}) // 初始化数组对象本身
+	bucket.triedBucket = make(map[int][]*commonModels.Node) // 初始化数组对象本身
 	for i := 0; i < TRIED_BUCKET_COUNT; i++ {
-		bucket.triedBucket[i] = make(map[int]interface{}) // 声明第一个维度每个对象都是一个子数组
+		bucket.triedBucket[i] = make([]*commonModels.Node, TRIED_BUCKET_LENGTH) // 声明第一个维度每个对象都是一个子数组
 	}
+
+	// 种子功能初始化
+	netConf := config.GetNetConf()
+	maxSeedCount, maxCountErr := strconv.Atoi(netConf.(map[string]interface{})["maxSeedCount"].(string))
+	if maxCountErr != nil {
+		logger.Warn("config miss: maxSeedCount. Using default.")
+		bucket.maxSeedCount = 100
+	}
+	bucket.maxSeedCount = maxSeedCount
+
+	bucket.CollectSeedFromConf()
+}
+
+//CollectSeedFromConf 从配置中获取种子
+func (bucket *Bucket) CollectSeedFromConf() {
+	netConf := config.GetNetConf()
+	// 把配置文件里面的种子列表加进来
+	confSeeds := netConf.(map[string]interface{})["seed"].([]interface{})
+	for i := 0; i < len(confSeeds); i++ {
+		node, nodeCreateErr := commonModels.CreateNode(map[string]interface{}{
+			"nodeID":      confSeeds[i].(map[string]interface{})["nodeID"],
+			"ip":          confSeeds[i].(map[string]interface{})["ip"],
+			"servicePort": confSeeds[i].(map[string]interface{})["servicePort"],
+		})
+		if nodeCreateErr != nil {
+			continue
+		}
+		bucket.AddSeed(node)
+	}
+}
+
+// AddSeed 添加一个节点到种子
+// 这里有可能是在初始化阶段就添加，也有可能在收到邻居信息的时候添加
+func (bucket *Bucket) AddSeed(node *commonModels.Node) *error.Error {
+	// 先检查桶里有没有这个节点
+	exist := bucket.IsNodeExist(node)
+	if exist {
+		return nil
+	}
+	// 如果超出限制的长度，就先取一个走
+	if len(bucket.seed) >= bucket.maxSeedCount {
+		bucket.GetSeed()
+	}
+	// 把配置文件里面的种子列表加进来
+	bucket.seed = append(bucket.seed, node)
+	return nil
+}
+
+// GetSeed 取出一个种子节点，并删除
+func (bucket *Bucket) GetSeed() *commonModels.Node {
+	if len(bucket.seed) == 0 {
+		return nil
+	}
+	node := bucket.seed[0:1]
+	bucket.seed = bucket.seed[1:]
+
+	return node[0]
+}
+
+// AddNewNode 添加节点到新桶里
+func (bucket *Bucket) AddNewNode(n *commonModels.Node) *error.Error {
+	if bucket.IsNodeExist(n) {
+		return error.New(map[string]interface{}{
+			"message": "新节点已存在桶里，无需重复添加",
+		})
+	}
+
+	myNodeID := config.GetNodeID()
+	bucketNum := router.CalculateDistance(myNodeID, n.GetNodeID()) // 获得bucket编号
+	// 超长的先丢掉，就算不超长，都先把第一个元素丢掉，然后再新增一个新元素进来
+	bucket.newBucket[bucketNum] = bucket.newBucket[bucketNum][1:]
+	bucket.newBucket[bucketNum] = append(bucket.newBucket[bucketNum], n)
+
+	return nil
+}
+
+// GetRandomNode 获得一个随机节点，给tcp服务进行连接尝试
+func (bucket *Bucket) GetRandomNode() *commonModels.Node {
+
+	return nil
+}
+
+// IsNodeExist 检查节点是否存在路由桶里
+func (bucket *Bucket) IsNodeExist(n *commonModels.Node) bool {
+	for i := 0; i < len(bucket.newBucket); i++ {
+		for k := 0; k < len(bucket.newBucket[i]); k++ {
+			b := bucket.newBucket[i][k]
+			if b == nil {
+				continue
+			}
+			if b.GetNodeID() == n.GetNodeID() {
+				logger.Debug("exists")
+				return true
+			}
+		}
+	}
+
+	return false
 }

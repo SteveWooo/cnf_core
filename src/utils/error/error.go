@@ -24,7 +24,7 @@ func typeof(obj interface{}) string {
 // New 创建一个错误对象
 func New(info map[string]interface{}) *Error {
 	var error Error
-	logger.Error(info["message"].(string))
+	// logger.Error(info["message"].(string))
 	if info["message"] != nil {
 		error.message = info["message"].(string)
 	}

@@ -41,6 +41,7 @@ func ReceiveMsg(data interface{}) (interface{}, *error.Error) {
 	// 完成握手，加入Bucket
 	if (cache.GetDoingPing() == false || cache.GetDoingPing() == true) && cache.GetPing() == true && cache.GetPong() == true {
 		delete(pingPongCache, nodeID)
+		// logger.Debug("000")
 		newNode, newNodeError := commonModels.CreateNode(map[string]interface{}{
 			"ip":          sourceIP,
 			"servicePort": sourceServicePort,
@@ -62,7 +63,8 @@ func ReceiveMsg(data interface{}) (interface{}, *error.Error) {
 
 	// 非主动doingPong，并收到对方ping的
 	// 这时候需要先回复Pong，再主动发一个Ping
-	if cache.GetDoingPing() == false && cache.GetPong() == false && cache.GetPing() == true {
+	if cache.GetDoingPing() == false && cache.GetPing() == true && cache.GetPong() == false {
+		// logger.Debug("retu")
 		shaker.DoPong(sourceIP, sourceServicePort)
 		shaker.DoPing(sourceIP, sourceServicePort)
 		return nil, nil
@@ -70,20 +72,21 @@ func ReceiveMsg(data interface{}) (interface{}, *error.Error) {
 
 	// 没有doingPing，也没有收到过ping，直接收到pong的
 	// 无视即可
-	if cache.GetDoingPing() == false && cache.GetPong() == true && cache.GetPing() == false {
+	if cache.GetDoingPing() == false && cache.GetPing() == false && cache.GetPong() == true {
+		// logger.Debug("2")
 		return nil, nil
 	}
 
 	// 主动doingPing，并且收到pong的情况
 	// 这时候不需要干啥，干等获得对方的Ping即可
-	if cache.GetDoingPing() == true && cache.GetPong() == true && cache.GetPing() == false {
+	if cache.GetDoingPing() == true && cache.GetPing() == false && cache.GetPong() == true {
+		// logger.Debug("ret3")
 		return nil, nil
 	}
 
-	// 主动doingPing，收到对方Ping的正常情况
-	// 直接回复Pong即可
-	// 上方已实现Pon回复逻辑
-	if cache.GetDoingPing() == true && cache.GetPong() == true && cache.GetPing() == true {
+	// 主动发起Ping，但是也收到了对方的Ping，这时候就再发一个Ping给对方即可
+	if cache.GetDoingPing() == true && cache.GetPing() == true && cache.GetPong() == false {
+		shaker.DoPing(sourceIP, sourceServicePort)
 		return nil, nil
 	}
 
