@@ -4,6 +4,7 @@
         "publicKey": "04597d1ce2c2f37e9855585a81c371501071aa533cc9a289bba7be6feb287fba0090cead5793cffe62ca630fc4756aa83ec0ab5c3bc5176426505170de31b4cb9e",
         "ip": "127.0.0.1",
         "servicePort" : "30000",
+        "masterServer" : "true",
         "seed": [{
             "nodeID" : "04325a2cf3fefc0b25fb5091d376ded657bc3d309fbcf28a39c83ebc5181f48c50b2284fc673e2b2ddd964d351e29e0010883be9e5ed937602b3b1cd9de92124cf",
             "ip" : "127.0.0.1",

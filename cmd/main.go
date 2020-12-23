@@ -16,10 +16,14 @@ func main() {
 		return
 	}
 
+	var mainCnf cnf.Cnf
+
 	// 首先把cnf对象构建好, 里面包含了配置文件的引入
-	cnf.Build(conf)
+	mainCnf.Build(conf)
+
+	// 获取cnf对象的公共chanel
+	// nodeID, publicChanel := mainCnf.GetPublicChanel()
 
 	// 启动对象的所有服务
-	cnf.Run()
-
+	mainCnf.Run()
 }

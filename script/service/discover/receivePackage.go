@@ -14,7 +14,7 @@ func ReceiveMsg(data interface{}) (interface{}, *error.Error) {
 	nodeID := body.(map[string]interface{})["nodeID"].(string)
 	sourceIP := data.(map[string]interface{})["sourceIP"].(string)
 	sourceServicePort := data.(map[string]interface{})["sourceServicePort"].(string)
-
+	// logger.Debug(body)
 	// Ping case
 	if msg.(map[string]interface{})["type"] == "1" {
 		pingErr := ReceivePing(data)
@@ -70,6 +70,13 @@ func ReceiveMsg(data interface{}) (interface{}, *error.Error) {
 		return nil, nil
 	}
 
+	// 主动发起Ping，但是也收到了对方的Ping，这时候就再发一个Ping给对方即可
+	if cache.GetDoingPing() == true && cache.GetPing() == true && cache.GetPong() == false {
+		shaker.DoPong(sourceIP, sourceServicePort)
+		shaker.DoPing(sourceIP, sourceServicePort)
+		return nil, nil
+	}
+
 	// 没有doingPing，也没有收到过ping，直接收到pong的
 	// 无视即可
 	if cache.GetDoingPing() == false && cache.GetPing() == false && cache.GetPong() == true {
@@ -81,12 +88,6 @@ func ReceiveMsg(data interface{}) (interface{}, *error.Error) {
 	// 这时候不需要干啥，干等获得对方的Ping即可
 	if cache.GetDoingPing() == true && cache.GetPing() == false && cache.GetPong() == true {
 		// logger.Debug("ret3")
-		return nil, nil
-	}
-
-	// 主动发起Ping，但是也收到了对方的Ping，这时候就再发一个Ping给对方即可
-	if cache.GetDoingPing() == true && cache.GetPing() == true && cache.GetPong() == false {
-		shaker.DoPing(sourceIP, sourceServicePort)
 		return nil, nil
 	}
 

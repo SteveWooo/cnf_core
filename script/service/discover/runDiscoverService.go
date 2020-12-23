@@ -16,7 +16,6 @@ var limitProcessUDPData chan bool
 func RunService(chanels map[string]chan map[string]interface{}, signal chan bool) *error.Error {
 	limitProcessUDPData = make(chan bool, 5)
 	udpConn, listenErr := net.ListenUDP("udp", localSocketAddr)
-	defer udpConn.Close()
 
 	if listenErr != nil {
 		return error.New(map[string]interface{}{
@@ -24,6 +23,7 @@ func RunService(chanels map[string]chan map[string]interface{}, signal chan bool
 			"originErr": listenErr,
 		})
 	}
+	defer udpConn.Close()
 	// 也要把socket赋值给shaker
 	shaker.SetSocketConn(udpConn)
 

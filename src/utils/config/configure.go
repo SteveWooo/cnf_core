@@ -91,3 +91,11 @@ func GetNodeID() string {
 func SetConfig(conf interface{}) {
 	config = conf
 }
+
+// ParseNodeID 从配置对象中解析出NodeID来
+// @param conf interface{} 配置文件
+func ParseNodeID(conf interface{}) string {
+	confNet := conf.(map[string]interface{})["net"]
+	nodeID := sign.GetPublicKey(confNet.(map[string]interface{})["localPrivateKey"].(string))
+	return nodeID
+}

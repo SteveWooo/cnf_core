@@ -53,6 +53,14 @@ func HandleBucketSeed(chanel chan map[string]interface{}) {
 // HandleBucketNode 输出可用Node 主要对外输出可用Node，给节点连接服务为主
 func HandleBucketNode(chanel chan map[string]interface{}) {
 	for {
+		node := bucket.GetRandomNode()
 
+		if node == nil {
+			continue
+		}
+
+		chanel <- map[string]interface{}{
+			"node": node,
+		}
 	}
 }

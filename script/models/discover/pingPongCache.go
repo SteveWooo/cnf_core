@@ -9,6 +9,8 @@ type PingPongCachePackage struct {
 	receivePing bool
 	receivePong bool
 	ts          int64
+
+	kv chan bool
 }
 
 // CreatePingPongCache 初始化一个缓存对象
@@ -19,6 +21,7 @@ func CreatePingPongCache(nodeID string) *PingPongCachePackage {
 		receivePing: false,
 		receivePong: false,
 		ts:          timer.Now(),
+		kv:          make(chan bool, 1),
 	}
 
 	return &newCache
@@ -26,30 +29,45 @@ func CreatePingPongCache(nodeID string) *PingPongCachePackage {
 
 // SetDoingPing 反射
 func (c *PingPongCachePackage) SetDoingPing() {
+	c.kv <- true
 	c.doingPing = true
+	<-c.kv
 }
 
 // SetReceivePing 反射
 func (c *PingPongCachePackage) SetReceivePing() {
+	c.kv <- true
 	c.receivePing = true
+	<-c.kv
 }
 
 // SetReceivePong 反射
 func (c *PingPongCachePackage) SetReceivePong() {
+	c.kv <- true
 	c.receivePong = true
+	<-c.kv
 }
 
 // GetPing 反射
 func (c *PingPongCachePackage) GetPing() bool {
-	return c.receivePing
+	c.kv <- true
+	status := c.receivePing
+	<-c.kv
+	return status
 }
 
 // GetPong 反射
 func (c *PingPongCachePackage) GetPong() bool {
-	return c.receivePong
+	c.kv <- true
+	status := c.receivePong
+	<-c.kv
+	return status
 }
 
-// GetdoingPing 反射
+// GetDoingPing 反射
 func (c *PingPongCachePackage) GetDoingPing() bool {
-	return c.doingPing
+	c.kv <- true
+	status := c.doingPing
+	<-c.kv
+	return status
 }

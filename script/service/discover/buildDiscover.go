@@ -50,7 +50,7 @@ func createUDPServer() *error.Error {
 	}
 	localSocketAddr = udpAddr
 
-	logger.Info("Discover Udp 服务创建成功，即将监听 " + address)
+	logger.Info("Discover UDP 服务创建成功，即将监听 " + address)
 
 	return nil
 }
