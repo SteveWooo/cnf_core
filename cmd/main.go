@@ -16,14 +16,33 @@ func main() {
 		return
 	}
 
+	subConf, _ := config.LoadByPath("../config/config.json")
+
 	var mainCnf cnf.Cnf
+	var subCnf cnf.Cnf
 
 	// 首先把cnf对象构建好, 里面包含了配置文件的引入
 	mainCnf.Build(conf)
+	subCnf.Build(subConf)
 
 	// 获取cnf对象的公共chanel
-	// nodeID, publicChanel := mainCnf.GetPublicChanel()
+	mainNodeID, mainPublicChanel := mainCnf.GetPublicChanel()
+	subNodeID, subPublicChanel := subCnf.GetPublicChanel()
+
+	publicChanels := map[string]interface{}{
+		mainNodeID: mainPublicChanel,
+		subNodeID:  subPublicChanel,
+	}
 
 	// 启动对象的所有服务
-	mainCnf.Run()
+	// mainCnf.Run()
+	go mainCnf.RunWithPublicChanel(publicChanels)
+	go subCnf.RunWithPublicChanel(publicChanels)
+
+	// 挂起主协程
+	c := make(chan bool)
+	d := <-c
+	if d {
+		return
+	}
 }

@@ -32,13 +32,13 @@ type Bucket struct {
 func (bucket *Bucket) Build(conf interface{}) {
 	bucket.conf = conf
 	bucket.newBucket = make(map[int][]*commonModels.Node) // 初始化数组对象本身
-	for i := 0; i < NEW_BUCKET_COUNT; i++ {
-		bucket.newBucket[i] = make([]*commonModels.Node, NEW_BUCKET_LENGTH) // 声明第一个维度每个对象都是一个子数组
+	for i := 0; i <= NEW_BUCKET_COUNT; i++ {
+		bucket.newBucket[i] = make([]*commonModels.Node, NEW_BUCKET_LENGTH+1) // 声明第一个维度每个对象都是一个子数组
 	}
 
 	bucket.triedBucket = make(map[int][]*commonModels.Node) // 初始化数组对象本身
-	for i := 0; i < TRIED_BUCKET_COUNT; i++ {
-		bucket.triedBucket[i] = make([]*commonModels.Node, TRIED_BUCKET_LENGTH) // 声明第一个维度每个对象都是一个子数组
+	for i := 0; i <= TRIED_BUCKET_COUNT; i++ {
+		bucket.triedBucket[i] = make([]*commonModels.Node, TRIED_BUCKET_LENGTH+1) // 声明第一个维度每个对象都是一个子数组
 	}
 
 	// 种子功能初始化

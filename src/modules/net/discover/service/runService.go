@@ -13,6 +13,15 @@ import (
 // @param chanel 与消息队列通信的发现服务专用管道
 // @param signal 用于通知上级服务udp服务已就绪
 func (discoverService *DiscoverService) RunService(chanels map[string]chan map[string]interface{}, signal chan bool) *error.Error {
+	// 非主节点，不需要监听socket
+	confNet := discoverService.conf.(map[string]interface{})["net"]
+	if confNet.(map[string]interface{})["masterServer"] != "true" {
+		signal <- true
+		return nil
+	}
+
+	discoverService.myPrivateChanel = chanels
+
 	udpConn, listenErr := net.ListenUDP("udp", discoverService.socketAddr)
 
 	if listenErr != nil {
@@ -31,7 +40,7 @@ func (discoverService *DiscoverService) RunService(chanels map[string]chan map[s
 	for {
 		// 压入数据，填缓冲池。如果缓冲池满了，就不会有下面的协程创建了，意味着会丢掉过多的UDP包
 		discoverService.limitProcessUDPData <- true
-		go discoverService.ProcessUDPData(chanels["discoverMsgReceiveChanel"], udpConn)
+		go discoverService.ProcessUDPData(chanels["receiveDiscoverMsgChanel"], udpConn)
 	}
 }
 
@@ -87,17 +96,18 @@ func (discoverService *DiscoverService) ParseUDPData(udpData map[string]interfac
 			"originErr": jsonUnMarshalErr,
 		})
 	}
-
+	// logger.Debug(body)
 	// 提取消息
 	msg := body.(map[string]interface{})["msg"].(string)
 	messageHash := sign.Hash(msg)
 	signature := body.(map[string]interface{})["signature"]
-	rcid := body.(map[string]interface{})["recid"].(float64)
+	rcid, _ := strconv.Atoi(body.(map[string]interface{})["recid"].(string))
 
 	// 获取nodeId
-	recoverPublicKey, _ := sign.Recover(signature.(string), messageHash, uint64(rcid))
-	body.(map[string]interface{})["nodeID"] = recoverPublicKey
-	if recoverPublicKey == "" {
+	recoverPublicKey, recoverErr := sign.Recover(signature.(string), messageHash, uint64(rcid))
+	body.(map[string]interface{})["senderNodeID"] = recoverPublicKey
+	// logger.Debug(body.(map[string]interface{})["senderNodeID"])
+	if recoverErr != nil {
 		return nil, error.New(map[string]interface{}{
 			"message": "接收到不合法的msg内容，无法解析NodeID",
 		})
@@ -117,6 +127,17 @@ func (discoverService *DiscoverService) ParseUDPData(udpData map[string]interfac
 	data["body"] = body
 	data["sourceIP"] = udpData["sourceIP"]
 	data["sourceServicePort"] = udpData["sourceServicePort"]
+
+	// 从body中获得目标nodeid，用于接收方的端口多路复用
+	data["targetNodeID"] = body.(map[string]interface{})["targetNodeID"]
+	delete(body.(map[string]interface{}), "targetNodeID")
+
+	if data["targetNodeID"] == "" || len(data["targetNodeID"].(string)) != 130 {
+		return nil, error.New(map[string]interface{}{
+			"message":   "接收到不合法的msg内容",
+			"originErr": msgJSONUnMarshalErr,
+		})
+	}
 
 	return data, nil
 }

@@ -12,7 +12,7 @@ type Cnf struct {
 	cnfNet cnfNet.CnfNet
 
 	// 给其他协程使用, 配合配置中net.masterServer参数, 实现端口多路复用
-	publicChanel map[string]chan map[string]interface{}
+	myPublicChanel map[string]chan map[string]interface{}
 }
 
 // Build 主程序配置入口
@@ -21,20 +21,23 @@ func (cnf *Cnf) Build(conf interface{}) {
 	config.SetConfig(conf)
 	cnf.conf = conf
 
-	cnf.publicChanel = make(map[string]chan map[string]interface{})
+	cnf.myPublicChanel = make(map[string]chan map[string]interface{})
 	// 初始化多路复用的公共频道
-	cnf.publicChanel["discoverMsgReceiveChanel"] = make(chan map[string]interface{}, 5)
-	cnf.publicChanel["nodeConnectionMsgChanel"] = make(chan map[string]interface{}, 5)
+	cnf.myPublicChanel["receiveDiscoverMsgChanel"] = make(chan map[string]interface{}, 5)       // 接收Udp消息，扔这里
+	cnf.myPublicChanel["receiveNodeConnectionMsgChanel"] = make(chan map[string]interface{}, 5) // 接收tcp消息，扔这里
+
+	cnf.myPublicChanel["sendDiscoverMsgChanel"] = make(chan map[string]interface{}, 5)       // 要发送udp数据，扔这里
+	cnf.myPublicChanel["sendNodeConnectionMsgChanel"] = make(chan map[string]interface{}, 5) // 要发送tcp数据，扔这里
 
 	// 网络层入口构建
-	cnf.cnfNet.Build(conf)
+	cnf.cnfNet.Build(conf, cnf.myPublicChanel)
 }
 
 // GetPublicChanel 获取公共消息chanel
 // @return nodeID 节点唯一标识
 // @return publicChanel 节点的公共频道
 func (cnf *Cnf) GetPublicChanel() (string, map[string]chan map[string]interface{}) {
-	return config.ParseNodeID(cnf.conf), cnf.publicChanel
+	return config.ParseNodeID(cnf.conf), cnf.myPublicChanel
 }
 
 // Run 主程序入口, 无公共Chanel的实现

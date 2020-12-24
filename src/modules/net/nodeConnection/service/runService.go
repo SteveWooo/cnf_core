@@ -8,10 +8,19 @@ import (
 
 	"github.com/cnf_core/src/utils/error"
 	"github.com/cnf_core/src/utils/logger"
+
+	nodeConnectionModels "github.com/cnf_core/src/modules/net/nodeConnection/models"
 )
 
 // RunService 启动节点通信的TCP相关服务
 func (ncService *NodeConnectionService) RunService(chanels map[string]chan map[string]interface{}, signal chan bool) *error.Error {
+	// 非主节点，不需要监听socket
+	confNet := ncService.conf.(map[string]interface{})["net"]
+	if confNet.(map[string]interface{})["masterServer"] != "true" {
+		signal <- true
+		return nil
+	}
+
 	tcpListener, listenErr := net.Listen("tcp", ncService.socketAddr)
 	if listenErr != nil {
 		return error.New(map[string]interface{}{
@@ -33,16 +42,25 @@ func (ncService *NodeConnectionService) RunService(chanels map[string]chan map[s
 			continue
 		}
 
-		go ncService.ProcessTCPData(chanels["nodeConnectionMsgChanel"], conn)
+		// 先处理好这个conn，再去处理他收到的消息
+		remoteAddr := conn.RemoteAddr()
+		var nodeConn nodeConnectionModels.NodeConn
+		nodeConn.Build(conn)
+		nodeConn.SetRemoteAddr(remoteAddr.String())
+
+		// 添加一个未握手的连接到InBoundConn里面去
+		ncService.AddInBoundConn(&nodeConn)
+
+		go ncService.ProcessTCPData(chanels["receiveNodeConnectionMsgChanel"], &nodeConn)
 	}
 }
 
 // ProcessTCPData 狂读TCP socket
-func (ncService *NodeConnectionService) ProcessTCPData(chanel chan map[string]interface{}, conn net.Conn) {
+func (ncService *NodeConnectionService) ProcessTCPData(chanel chan map[string]interface{}, nodeConn *nodeConnectionModels.NodeConn) {
 	for {
 		tcpSourceDataByte := make([]byte, 1024)
 
-		length, readErr := conn.Read(tcpSourceDataByte)
+		length, readErr := nodeConn.Socket.Read(tcpSourceDataByte)
 		if readErr != nil {
 			// 读取数据失败，说明socket已经断掉，所以要结束这个socket
 
@@ -60,7 +78,10 @@ func (ncService *NodeConnectionService) ProcessTCPData(chanel chan map[string]in
 			continue
 		}
 
-		chanel <- tcpData.(map[string]interface{})
+		chanel <- map[string]interface{}{
+			"nodeConn": nodeConn,
+			"tcpData":  tcpData.(map[string]interface{}),
+		}
 	}
 }
 
@@ -84,6 +105,19 @@ func (ncService *NodeConnectionService) ParseTCPData(tcpSourceData string) (inte
 			"message": "tcp数据包解析失败",
 		})
 	}
+
+	var msgJSON interface{}
+	// logger.Debug(contentJSON)
+	contentJSONMsg := contentJSON.(map[string]interface{})["msg"].(string)
+	msgJSONDecodeErr := json.Unmarshal([]byte(contentJSONMsg), &msgJSON)
+	if msgJSONDecodeErr != nil {
+		return nil, error.New(map[string]interface{}{
+			"message": "tcp数据包解析失败",
+		})
+	}
+
+	contentJSON.(map[string]interface{})["msgJSON"] = msgJSON
+	contentJSON.(map[string]interface{})["senderNodeID"] = msgJSON.(map[string]interface{})["nodeID"]
 
 	return contentJSON, nil
 }

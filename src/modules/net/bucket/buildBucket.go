@@ -11,7 +11,8 @@ import (
 
 //CollectSeedFromConf 从配置中获取种子
 func (bucket *Bucket) CollectSeedFromConf() {
-	netConf := config.GetNetConf()
+	// netConf := config.GetNetConf()
+	netConf := bucket.conf.(map[string]interface{})["net"]
 	// 把配置文件里面的种子列表加进来
 	confSeeds := netConf.(map[string]interface{})["seed"].([]interface{})
 	for i := 0; i < len(confSeeds); i++ {

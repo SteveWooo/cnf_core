@@ -11,16 +11,19 @@ func (discoverService *DiscoverService) ReceiveMsg(data interface{}) (interface{
 	body := data.(map[string]interface{})["body"]
 	msg := body.(map[string]interface{})["msgJSON"]
 
-	nodeID := body.(map[string]interface{})["nodeID"].(string)
+	nodeID := body.(map[string]interface{})["senderNodeID"].(string)
 	sourceIP := data.(map[string]interface{})["sourceIP"].(string)
 	sourceServicePort := data.(map[string]interface{})["sourceServicePort"].(string)
-	// logger.Debug(body)
+	// logger.Debug(config.ParseNodeID(discoverService.conf) + " receive : " + msg.(map[string]interface{})["type"].(string) + " from: " + nodeID)
 	// Ping case
 	if msg.(map[string]interface{})["type"] == "1" {
 		pingErr := discoverService.ReceivePing(data)
 		if pingErr != nil {
 			return nil, pingErr
 		}
+
+		// 收到Ping 就要回pong
+		discoverService.DoPong(sourceIP, sourceServicePort, nodeID)
 	}
 
 	// Pong case
@@ -33,6 +36,7 @@ func (discoverService *DiscoverService) ReceiveMsg(data interface{}) (interface{
 
 	cache, existCache := discoverService.pingPongCache[nodeID]
 	if existCache == false {
+		// logger.Debug("senderNodeID: " + nodeID + "\nmyNodeID :" + config.ParseNodeID(discoverService.conf))
 		return nil, error.New(map[string]interface{}{
 			"message": "非法数据包：收到数据包，但是没有给这个节点做缓存。",
 		})
@@ -41,7 +45,6 @@ func (discoverService *DiscoverService) ReceiveMsg(data interface{}) (interface{
 	// 完成握手，加入Bucket
 	if (cache.GetDoingPing() == false || cache.GetDoingPing() == true) && cache.GetPing() == true && cache.GetPong() == true {
 		delete(discoverService.pingPongCache, nodeID)
-		// logger.Debug("000")
 		newNode, newNodeError := commonModels.CreateNode(map[string]interface{}{
 			"ip":          sourceIP,
 			"servicePort": sourceServicePort,
@@ -51,9 +54,9 @@ func (discoverService *DiscoverService) ReceiveMsg(data interface{}) (interface{
 			return nil, newNodeError
 		}
 
-		if msg.(map[string]interface{})["type"] == "1" {
-			discoverService.DoPong(sourceIP, sourceServicePort)
-		}
+		// if msg.(map[string]interface{})["type"] == "1" {
+		// 	discoverService.DoPong(sourceIP, sourceServicePort, nodeID)
+		// }
 
 		return map[string]interface{}{
 			"bucketEvent": "addNew",
@@ -65,15 +68,15 @@ func (discoverService *DiscoverService) ReceiveMsg(data interface{}) (interface{
 	// 这时候需要先回复Pong，再主动发一个Ping
 	if cache.GetDoingPing() == false && cache.GetPing() == true && cache.GetPong() == false {
 		// logger.Debug("retu")
-		discoverService.DoPong(sourceIP, sourceServicePort)
-		discoverService.DoPing(sourceIP, sourceServicePort)
+		// discoverService.DoPong(sourceIP, sourceServicePort, nodeID)
+		discoverService.DoPing(sourceIP, sourceServicePort, nodeID)
 		return nil, nil
 	}
 
-	// 主动发起Ping，但是也收到了对方的Ping，这时候就再发一个Ping给对方即可
+	// 主动发起Ping TODO：检查进程时，定期重试ping，或者删除掉这个缓存
 	if cache.GetDoingPing() == true && cache.GetPing() == true && cache.GetPong() == false {
-		discoverService.DoPong(sourceIP, sourceServicePort)
-		discoverService.DoPing(sourceIP, sourceServicePort)
+		// discoverService.DoPong(sourceIP, sourceServicePort, nodeID)
+		// discoverService.DoPing(sourceIP, sourceServicePort, nodeID)
 		return nil, nil
 	}
 
@@ -124,7 +127,7 @@ func (discoverService *DiscoverService) ReceivePong(data interface{}) *error.Err
 // @param data udp数据包Json
 func (discoverService *DiscoverService) SetPingCache(data interface{}) *error.Error {
 	body := data.(map[string]interface{})["body"]
-	nodeID := body.(map[string]interface{})["nodeID"].(string)
+	nodeID := body.(map[string]interface{})["senderNodeID"].(string)
 	if nodeID == "" {
 		return error.New(map[string]interface{}{
 			"message": "数据包中解析不出NodeID",
@@ -153,7 +156,7 @@ func (discoverService *DiscoverService) SetPingCache(data interface{}) *error.Er
 // @param data udp数据包Json
 func (discoverService *DiscoverService) SetPongCache(data interface{}) *error.Error {
 	body := data.(map[string]interface{})["body"]
-	nodeID := body.(map[string]interface{})["nodeID"].(string)
+	nodeID := body.(map[string]interface{})["senderNodeID"].(string)
 	if nodeID == "" {
 		return error.New(map[string]interface{}{
 			"message": "数据包中解析不出NodeID",

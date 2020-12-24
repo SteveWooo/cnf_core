@@ -27,11 +27,12 @@ func (discoverService *DiscoverService) ProcessSeed(chanels map[string]chan map[
 
 		nodeID := seedNode.GetNodeID()
 		newCache := discoverModel.CreatePingPongCache(nodeID)
+		// logger.Debug(config.ParseNodeID(discoverService.conf) + " get seed: " + nodeID)
 		// 设置标识为主动发起的缓存
 		newCache.SetDoingPing()
 		discoverService.pingPongCache[nodeID] = newCache
 
-		discoverService.DoPing(seedNode.GetIP(), seedNode.GetServicePort())
+		discoverService.DoPing(seedNode.GetIP(), seedNode.GetServicePort(), nodeID)
 	}
 }
 

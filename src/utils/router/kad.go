@@ -27,5 +27,7 @@ func CalculateDistance(nodeID1 string, nodeID2 string) int {
 		}
 	}
 
-	return 63 - bucketCount
+	// logger.Debug(sourceID)
+
+	return 64 - bucketCount
 }

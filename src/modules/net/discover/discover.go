@@ -9,12 +9,15 @@ import (
 type Discover struct {
 	conf    interface{}
 	service discoverService.DiscoverService
+	// 与其他节点交互的chanel
+	myPublicChanel map[string]chan map[string]interface{}
 }
 
 // Build 搭建Discover服务
-func (discover *Discover) Build(conf interface{}) *error.Error {
+func (discover *Discover) Build(conf interface{}, myPublicChanel map[string]chan map[string]interface{}) *error.Error {
 	discover.conf = conf
-	discover.service.Build(conf)
+	discover.myPublicChanel = myPublicChanel
+	discover.service.Build(conf, discover.myPublicChanel)
 	return nil
 }
 
@@ -32,4 +35,9 @@ func (discover *Discover) RunDoDiscover(chanels map[string]chan map[string]inter
 // ReceiveMsg 接收消息入口
 func (discover *Discover) ReceiveMsg(data interface{}) (interface{}, *error.Error) {
 	return discover.service.ReceiveMsg(data)
+}
+
+// SendMsg 发送消息接口
+func (discover *Discover) SendMsg(message string, targetIP string, targetServicePort string) {
+	discover.service.Send(message, targetIP, targetServicePort)
 }

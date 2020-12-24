@@ -1,13 +1,19 @@
 {
     "net": {
-        "localPrivateKey": "a104534c3a9aa3fdb6365481afdd968a5eca61a358822f63afc391ac9f659905",
-        "publicKey": "049055045e7ee2201563e98143cea1fb57925531899c1b865f90eef5abadd70425e429a87915ab18556f589c6044527943c2fa0c617d15649ef6a15bc14ad84ee5",
+        "localPrivateKey": "db1e8bdee9eb3db78e45351565d62594d5e1216536d0b4d600125c70b976ec11",
+        "publicKey": "04e374a733877794c6d65c16e93e87562a3596f43bd2fd4fc55a2fae4af3c5a51c4526158ae076fed59ebd4253444a62ea7c23104c506bebd99d3e0848c26883db",
         "ip": "127.0.0.1",
-        "servicePort" : 30000,
-        "seed": [],
-        "networkid": 1
+        "servicePort" : "30000",
+        "masterServer" : "false",
+        "seed": [{
+            "nodeID" : "04597d1ce2c2f37e9855585a81c371501071aa533cc9a289bba7be6feb287fba0090cead5793cffe62ca630fc4756aa83ec0ab5c3bc5176426505170de31b4cb9e",
+            "ip" : "127.0.0.1",
+            "servicePort" : "30000"
+        }],
+        "maxSeedCount" : "1000",
+        "networkid": "1"
     },
     "dao" : {
-        "datadir": "D:\\projects\\GOPATH\\src\\github.com\\cnf_core\\data"
+        "dataDirect": "D:\\projects\\GOPATH\\src\\github.com\\cnf_core\\data"
     }
 }

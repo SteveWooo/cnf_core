@@ -22,12 +22,19 @@ type DiscoverService struct {
 
 	// 并发监听socket的协程数
 	limitProcessUDPData chan bool
+
+	// 本届节点的公共频道
+	myPublicChanel map[string]chan map[string]interface{}
+
+	// 内部消息转发的chanel
+	myPrivateChanel map[string]chan map[string]interface{}
 }
 
 // Build 构建发现服务
-func (discoverService *DiscoverService) Build(conf interface{}) *error.Error {
+func (discoverService *DiscoverService) Build(conf interface{}, myPublicChanel map[string]chan map[string]interface{}) *error.Error {
 	// 初始化配置
 	discoverService.conf = conf
+	discoverService.myPublicChanel = myPublicChanel
 
 	// 初始化缓存变量
 	discoverService.pingPongCache = make(map[string]*discoverModel.PingPongCachePackage)

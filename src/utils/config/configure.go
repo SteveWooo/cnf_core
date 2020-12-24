@@ -13,8 +13,8 @@ import (
 var config interface{}
 
 // 载入全局配置
-func loadConfig() (interface{}, interface{}) {
-	configFilePath := GetArg("configure")
+func loadConfig(configFilePath string) (interface{}, interface{}) {
+	// configFilePath := GetArg("configure")
 	if configFilePath == "" {
 		// logger.Error("missing console argv: configure")
 		return nil, error.New(map[string]interface{}{
