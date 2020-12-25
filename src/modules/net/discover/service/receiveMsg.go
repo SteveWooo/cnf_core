@@ -3,7 +3,9 @@ package service
 import (
 	commonModels "github.com/cnf_core/src/modules/net/common/models"
 	discoverModel "github.com/cnf_core/src/modules/net/discover/models"
+	"github.com/cnf_core/src/utils/config"
 	"github.com/cnf_core/src/utils/error"
+	"github.com/cnf_core/src/utils/logger"
 )
 
 // ReceiveMsg 作为发现服务消息接收的入口
@@ -36,7 +38,7 @@ func (discoverService *DiscoverService) ReceiveMsg(data interface{}) (interface{
 
 	cache, existCache := discoverService.pingPongCache[nodeID]
 	if existCache == false {
-		// logger.Debug("senderNodeID: " + nodeID + "\nmyNodeID :" + config.ParseNodeID(discoverService.conf))
+		logger.Debug("senderNodeID: " + nodeID + "\nmyNodeID :" + config.ParseNodeID(discoverService.conf))
 		return nil, error.New(map[string]interface{}{
 			"message": "非法数据包：收到数据包，但是没有给这个节点做缓存。",
 		})

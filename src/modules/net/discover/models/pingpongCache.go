@@ -10,6 +10,9 @@ type PingPongCachePackage struct {
 	receivePong bool
 	ts          int64
 
+	ip          string
+	servicePort string
+
 	kv chan bool
 }
 
@@ -28,9 +31,11 @@ func CreatePingPongCache(nodeID string) *PingPongCachePackage {
 }
 
 // SetDoingPing 反射
-func (c *PingPongCachePackage) SetDoingPing() {
+func (c *PingPongCachePackage) SetDoingPing(ip string, servicePort string) {
 	c.kv <- true
 	c.doingPing = true
+	c.ip = ip
+	c.servicePort = servicePort
 	<-c.kv
 }
 
@@ -70,4 +75,36 @@ func (c *PingPongCachePackage) GetDoingPing() bool {
 	status := c.doingPing
 	<-c.kv
 	return status
+}
+
+// GetTs 反射
+func (c *PingPongCachePackage) GetTs() int64 {
+	c.kv <- true
+	ts := c.ts
+	<-c.kv
+	return ts
+}
+
+// GetNodeID 反射
+func (c *PingPongCachePackage) GetNodeID() string {
+	c.kv <- true
+	nodeID := c.nodeID
+	<-c.kv
+	return nodeID
+}
+
+// GetIP 反射
+func (c *PingPongCachePackage) GetIP() string {
+	c.kv <- true
+	ip := c.ip
+	<-c.kv
+	return ip
+}
+
+// GetServicePort 反射
+func (c *PingPongCachePackage) GetServicePort() string {
+	c.kv <- true
+	servicePort := c.servicePort
+	<-c.kv
+	return servicePort
 }

@@ -45,6 +45,7 @@ func (cnf *Cnf) Run() {
 	go cnf.cnfNet.Run()
 
 	// 常驻，监听各个协程的状态
+	go cnf.cnfNet.DoLogHTTP()
 
 	// 挂起主协程
 	c := make(chan bool)
@@ -59,6 +60,7 @@ func (cnf *Cnf) RunWithPublicChanel(nodeChanels map[string]interface{}) {
 	go cnf.cnfNet.RunWithPublicChanel(nodeChanels)
 
 	// 常驻，监听各个协程的状态
+	go cnf.cnfNet.DoLogHTTP()
 
 	// 挂起主协程
 	c := make(chan bool)

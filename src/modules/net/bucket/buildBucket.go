@@ -2,12 +2,59 @@ package bucket
 
 import (
 	"math/rand"
+	"strconv"
 
 	commonModels "github.com/cnf_core/src/modules/net/common/models"
 	config "github.com/cnf_core/src/utils/config"
 	error "github.com/cnf_core/src/utils/error"
+	"github.com/cnf_core/src/utils/logger"
 	"github.com/cnf_core/src/utils/router"
 )
+
+// TODO 这些都加到配置里面8
+var NEW_BUCKET_COUNT int = 64
+var NEW_BUCKET_LENGTH int = 64
+var TRIED_BUCKET_COUNT int = 64
+var TRIED_BUCKET_LENGTH int = 16
+
+// Bucket 路由桶
+type Bucket struct {
+	conf        interface{}
+	newBucket   map[int][]*commonModels.Node
+	triedBucket map[int][]*commonModels.Node
+
+	seed         []*commonModels.Node
+	maxSeedCount int
+
+	kv chan bool // 关于两个bucket和seed的读写锁
+}
+
+// Build 初始化路由桶
+func (bucket *Bucket) Build(conf interface{}) {
+	bucket.conf = conf
+	bucket.newBucket = make(map[int][]*commonModels.Node) // 初始化数组对象本身
+	for i := 0; i <= NEW_BUCKET_COUNT; i++ {
+		bucket.newBucket[i] = make([]*commonModels.Node, NEW_BUCKET_LENGTH+1) // 声明第一个维度每个对象都是一个子数组
+	}
+
+	bucket.triedBucket = make(map[int][]*commonModels.Node) // 初始化数组对象本身
+	for i := 0; i <= TRIED_BUCKET_COUNT; i++ {
+		bucket.triedBucket[i] = make([]*commonModels.Node, TRIED_BUCKET_LENGTH+1) // 声明第一个维度每个对象都是一个子数组
+	}
+
+	// 种子功能初始化
+	netConf := config.GetNetConf()
+	maxSeedCount, maxCountErr := strconv.Atoi(netConf.(map[string]interface{})["maxSeedCount"].(string))
+	if maxCountErr != nil {
+		logger.Warn("config miss: maxSeedCount. Using default.")
+		bucket.maxSeedCount = 100
+	}
+	bucket.maxSeedCount = maxSeedCount
+
+	bucket.kv = make(chan bool, 1)
+
+	bucket.CollectSeedFromConf()
+}
 
 //CollectSeedFromConf 从配置中获取种子
 func (bucket *Bucket) CollectSeedFromConf() {
@@ -90,10 +137,10 @@ func (bucket *Bucket) GetRandomNode() *commonModels.Node {
 	bucketRand := rand.Intn(99)
 	if bucketRand < 50 {
 		b = bucket.newBucket
-		bucketCount = NEW_BUCKET_COUNT
+		bucketCount = NEW_BUCKET_COUNT + 1
 	} else {
 		b = bucket.triedBucket
-		bucketCount = TRIED_BUCKET_COUNT
+		bucketCount = TRIED_BUCKET_COUNT + 1
 	}
 	nodes := make([]*commonModels.Node, 0)
 	for i := 0; i < bucketCount; i++ {

@@ -14,6 +14,7 @@ import (
 
 // RunService 启动节点通信的TCP相关服务
 func (ncService *NodeConnectionService) RunService(chanels map[string]chan map[string]interface{}, signal chan bool) *error.Error {
+	ncService.myPrivateChanel = chanels
 	// 非主节点，不需要监听socket
 	confNet := ncService.conf.(map[string]interface{})["net"]
 	if confNet.(map[string]interface{})["masterServer"] != "true" {
@@ -45,28 +46,49 @@ func (ncService *NodeConnectionService) RunService(chanels map[string]chan map[s
 		// 先处理好这个conn，再去处理他收到的消息
 		remoteAddr := conn.RemoteAddr()
 		var nodeConn nodeConnectionModels.NodeConn
-		nodeConn.Build(conn)
+		nodeConn.Build(conn, "inBound")
 		nodeConn.SetRemoteAddr(remoteAddr.String())
 
-		// 添加一个未握手的连接到InBoundConn里面去
-		ncService.AddInBoundConn(&nodeConn)
+		// 不允许同样的tcp地址端口重复连接
+		if ncService.CheckBoundAddress(nodeConn.GetSenderIP(), nodeConn.GetSenderServicePort()) == true {
+			nodeConn.Socket.Close()
+			continue
+		}
 
-		go ncService.ProcessTCPData(chanels["receiveNodeConnectionMsgChanel"], &nodeConn)
+		// 如果inbound无空位，则放弃掉这条连接
+		if ncService.IsInBoundFull() == true {
+			nodeConn.Socket.Close()
+			continue
+		}
+
+		// 添加一个未握手的连接到InBoundConn里面去
+		addConnErr := ncService.AddInBoundConn(&nodeConn)
+		if addConnErr != nil {
+			// 连接失败就要关闭掉这条socket
+			nodeConn.Socket.Close()
+			continue
+		}
+
+		go ncService.ProcessInboundTCPData(&nodeConn)
 	}
 }
 
-// ProcessTCPData 狂读TCP socket
-func (ncService *NodeConnectionService) ProcessTCPData(chanel chan map[string]interface{}, nodeConn *nodeConnectionModels.NodeConn) {
+// ProcessInboundTCPData 狂读TCP socket
+func (ncService *NodeConnectionService) ProcessInboundTCPData(nodeConn *nodeConnectionModels.NodeConn) {
+	chanel := ncService.myPrivateChanel["receiveNodeConnectionMsgChanel"]
 	for {
 		tcpSourceDataByte := make([]byte, 1024)
 
 		length, readErr := nodeConn.Socket.Read(tcpSourceDataByte)
 		if readErr != nil {
 			// 读取数据失败，说明socket已经断掉，所以要结束这个socket
+			nodeConn.Socket.Close()
+			ncService.DeleteInBoundConn(nodeConn)
 
 			// 释放一个inBound限制
 			<-ncService.limitTCPInboundConn
-			logger.Debug("relive")
+			// logger.Debug(config.ParseNodeID(ncService.conf) + " inBound relive")
+			// logger.Debug(readErr)
 			return
 		}
 
@@ -79,8 +101,9 @@ func (ncService *NodeConnectionService) ProcessTCPData(chanel chan map[string]in
 		}
 
 		chanel <- map[string]interface{}{
-			"nodeConn": nodeConn,
-			"tcpData":  tcpData.(map[string]interface{}),
+			"nodeConn":    nodeConn,
+			"tcpData":     tcpData.(map[string]interface{}),
+			"messageFrom": "inBound",
 		}
 	}
 }
@@ -117,7 +140,7 @@ func (ncService *NodeConnectionService) ParseTCPData(tcpSourceData string) (inte
 	}
 
 	contentJSON.(map[string]interface{})["msgJSON"] = msgJSON
-	contentJSON.(map[string]interface{})["senderNodeID"] = msgJSON.(map[string]interface{})["nodeID"]
+	contentJSON.(map[string]interface{})["nodeID"] = msgJSON.(map[string]interface{})["from"].(map[string]interface{})["nodeID"]
 
 	return contentJSON, nil
 }

@@ -25,19 +25,27 @@ func main() {
 	mainCnf.Build(conf)
 	subCnf.Build(subConf)
 
-	// 获取cnf对象的公共chanel
-	mainNodeID, mainPublicChanel := mainCnf.GetPublicChanel()
-	subNodeID, subPublicChanel := subCnf.GetPublicChanel()
+	// // 获取cnf对象的公共chanel
+	// mainNodeID, mainPublicChanel := mainCnf.GetPublicChanel()
+	// subNodeID, subPublicChanel := subCnf.GetPublicChanel()
 
-	publicChanels := map[string]interface{}{
-		mainNodeID: mainPublicChanel,
-		subNodeID:  subPublicChanel,
-	}
+	// mainPublicChanels := map[string]interface{}{
+	// 	mainNodeID: mainPublicChanel,
+	// 	// subNodeID:  subPublicChanel,
+	// }
 
-	// 启动对象的所有服务
-	// mainCnf.Run()
-	go mainCnf.RunWithPublicChanel(publicChanels)
-	go subCnf.RunWithPublicChanel(publicChanels)
+	// subPublicChanels := map[string]interface{}{
+	// 	// mainNodeID: mainPublicChanel,
+	// 	subNodeID: subPublicChanel,
+	// }
+
+	// // 启动对象的所有服务
+	// // mainCnf.Run()
+	// go mainCnf.RunWithPublicChanel(mainPublicChanels)
+	// go subCnf.RunWithPublicChanel(subPublicChanels)
+
+	go mainCnf.Run()
+	go subCnf.Run()
 
 	// 挂起主协程
 	c := make(chan bool)

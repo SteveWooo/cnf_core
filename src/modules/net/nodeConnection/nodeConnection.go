@@ -27,6 +27,12 @@ func (nc *NodeConnection) RunService(chanels map[string]chan map[string]interfac
 	return nil
 }
 
+// RunFindConnection 启动节点通信的TCP相关服务
+func (nc *NodeConnection) RunFindConnection(chanels map[string]chan map[string]interface{}) *error.Error {
+	nc.service.RunFindConnection(chanels)
+	return nil
+}
+
 // ReceiveMsg 接收消息入口
 func (nc *NodeConnection) ReceiveMsg(data interface{}) (interface{}, *error.Error) {
 	return nc.service.ReceiveMsg(data)

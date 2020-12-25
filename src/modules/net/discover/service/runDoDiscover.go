@@ -29,7 +29,7 @@ func (discoverService *DiscoverService) ProcessSeed(chanels map[string]chan map[
 		newCache := discoverModel.CreatePingPongCache(nodeID)
 		// logger.Debug(config.ParseNodeID(discoverService.conf) + " get seed: " + nodeID)
 		// 设置标识为主动发起的缓存
-		newCache.SetDoingPing()
+		newCache.SetDoingPing(seedNode.GetIP(), seedNode.GetServicePort())
 		discoverService.pingPongCache[nodeID] = newCache
 
 		discoverService.DoPing(seedNode.GetIP(), seedNode.GetServicePort(), nodeID)
@@ -40,9 +40,15 @@ func (discoverService *DiscoverService) ProcessSeed(chanels map[string]chan map[
 // 用于检查
 func (discoverService *DiscoverService) ProcessDoingPingCache(chanels map[string]chan map[string]interface{}) {
 	for {
-		// for _, cache := range pingPongCache {
-		// 检查
-		// }
+		now := timer.Now()
+		for _, cache := range discoverService.pingPongCache {
+			// 不能删除太快，不然网络卡一卡就卡没了
+			if now-cache.GetTs() >= 120000 && cache.GetDoingPing() == true {
+				// 重发Ping
+				discoverService.DoPing(cache.GetIP(), cache.GetServicePort(), cache.GetNodeID())
+			}
+
+		}
 		timer.Sleep(1000) // 持续检查缓存队列的情况
 	}
 }

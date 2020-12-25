@@ -17,10 +17,11 @@ func (ncService *NodeConnectionService) SendShake(nodeConn *nodeConnectionModels
 	confNet := ncService.conf.(map[string]interface{})["net"]
 	now := strconv.FormatInt(timer.Now(), 10)
 	tcpSourceDataMsgFrom := map[string]interface{}{
-		"nodeID":  config.ParseNodeID(ncService.conf),
-		"ip":      confNet.(map[string]interface{})["ip"],
-		"tcpport": confNet.(map[string]interface{})["servicePort"],
-		"udpport": confNet.(map[string]interface{})["servicePort"],
+		"nodeID":    config.ParseNodeID(ncService.conf),
+		"ip":        confNet.(map[string]interface{})["ip"],
+		"tcpport":   confNet.(map[string]interface{})["servicePort"],
+		"udpport":   confNet.(map[string]interface{})["servicePort"],
+		"networkid": confNet.(map[string]interface{})["networkid"],
 	}
 
 	tcpSourceDataMsg := map[string]interface{}{
@@ -37,12 +38,16 @@ func (ncService *NodeConnectionService) SendShake(nodeConn *nodeConnectionModels
 		})
 	}
 
-	// tcpSourceDataMsgBase64String := base64.StdEncoding.EncodeToString(tcpSourceDataMsgJSONString)
-
 	tcpSourceData := map[string]interface{}{
-		"event":        "shakeEvent",
+		"event":        "",
 		"msg":          string(tcpSourceDataMsgJSONString),
 		"targetNodeID": targetNodeID,
+	}
+
+	if nodeConn.GetConnType() == "inBound" {
+		tcpSourceData["event"] = "shakeBackEvent"
+	} else {
+		tcpSourceData["event"] = "shakeEvent"
 	}
 
 	// var tcpData interface{}

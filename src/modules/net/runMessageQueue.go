@@ -35,7 +35,7 @@ func (cnfNet *CnfNet) HandleDiscoverMsgReceive(chanels map[string]chan map[strin
 			if exist {
 				chanel.(map[string]chan map[string]interface{})["receiveDiscoverMsgChanel"] <- udpData
 			} else {
-				logger.Error("接收到为止Udp数据包，本服务器无该节点")
+				logger.Error("接收到未知Udp数据包，本服务器无该节点")
 			}
 		}
 	}
@@ -46,6 +46,7 @@ func (cnfNet *CnfNet) HandleSubNodeDiscoverMsgReceive(chanels map[string]chan ma
 	for {
 		myNodeID := config.ParseNodeID(cnfNet.conf)
 		udpData := <-cnfNet.publicChanels[myNodeID].(map[string]chan map[string]interface{})["receiveDiscoverMsgChanel"]
+
 		// 交给发现服务模块处理消息，把结果透传回来即可
 		bucketOperate, receiveErr := cnfNet.discover.ReceiveMsg(udpData)
 		if receiveErr != nil {
@@ -86,6 +87,7 @@ func (cnfNet *CnfNet) HandleDiscoverMsgSend(chanels map[string]chan map[string]i
 func (cnfNet *CnfNet) HandleBucketOperate(chanels map[string]chan map[string]interface{}) {
 	for {
 		bucketOperate := <-chanels["bucketOperateChanel"]
+		// logger.Debug(bucketOperate)
 		cnfNet.bucket.ReceiveBucketOperateMsg(bucketOperate)
 	}
 }
@@ -101,7 +103,7 @@ func (cnfNet *CnfNet) HandleNodeConnectionMsgReceive(chanels map[string]chan map
 			if exist {
 				chanel.(map[string]chan map[string]interface{})["receiveNodeConnectionMsgChanel"] <- connectionMsg
 			} else {
-				logger.Error("接收到为止Udp数据包，本服务器无该节点")
+				logger.Error("接收到未知NodeID tcp数据包，本服务器无该节点")
 			}
 		}
 	}
@@ -117,6 +119,8 @@ func (cnfNet *CnfNet) HandleSubNodeConnectionMsgReceive(chanels map[string]chan 
 		if nodeConnReceiveErr != nil {
 			continue
 		}
+
+		// 检查桶里有没有这个节点，如果还没有在桶里出现的话，就断开拒绝连接
 
 		cnfNet.nodeConnection.HandleMsg(connectionMsgData)
 
