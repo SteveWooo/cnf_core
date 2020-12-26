@@ -18,7 +18,7 @@ func main() {
 		return
 	}
 
-	COUNT := 600
+	COUNT := 800
 
 	publicChanel := make(map[string]interface{})
 	cnfObj := make([]*cnf.Cnf, COUNT)

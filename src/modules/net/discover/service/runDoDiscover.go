@@ -1,6 +1,8 @@
 package service
 
 import (
+	"math/rand"
+
 	commonModels "github.com/cnf_core/src/modules/net/common/models"
 	discoverModel "github.com/cnf_core/src/modules/net/discover/models"
 	"github.com/cnf_core/src/utils/logger"
@@ -17,7 +19,7 @@ func (discoverService *DiscoverService) RunDoDiscover(chanels map[string]chan ma
 func (discoverService *DiscoverService) ProcessSeed(chanels map[string]chan map[string]interface{}) {
 	// 不断获取seed，然后使用shaker发起握手。
 	for {
-
+		timer.Sleep(1000 + rand.Intn(1000))
 		seed := <-chanels["bucketSeedChanel"]
 		if seed == nil {
 			logger.Warn("主动发现节点模块中，获取到空的种子节点")

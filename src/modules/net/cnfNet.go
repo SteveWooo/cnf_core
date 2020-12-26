@@ -77,13 +77,13 @@ func (cnfNet *CnfNet) doRun() interface{} {
 	// 初始化所有管道
 	chanels := map[string]chan map[string]interface{}{
 		// 这只有Master节点才用到
-		"receiveDiscoverMsgChanel":       make(chan map[string]interface{}, 5), // 管理udp socket中获取到消息的chanel
-		"receiveNodeConnectionMsgChanel": make(chan map[string]interface{}, 5), // 管理tcp socket中获取到消息的chanel
+		"receiveDiscoverMsgChanel":       make(chan map[string]interface{}, 20), // 管理udp socket中获取到消息的chanel
+		"receiveNodeConnectionMsgChanel": make(chan map[string]interface{}, 20), // 管理tcp socket中获取到消息的chanel
 
 		// 非master节点都能用到
-		"bucketOperateChanel": make(chan map[string]interface{}, 5), // 一般用于添加bucket节点，或seed
-		"bucketSeedChanel":    make(chan map[string]interface{}, 5), // bucket服务往这个通道输送邻居节点、种子，给doDiscover服务用
-		"bucketNodeChanel":    make(chan map[string]interface{}, 1), // bucket服务往这个通道输送可用节点，给tcp服务尝试连接。
+		"bucketOperateChanel": make(chan map[string]interface{}, 20), // 一般用于添加bucket节点，或seed
+		"bucketSeedChanel":    make(chan map[string]interface{}, 20), // bucket服务往这个通道输送邻居节点、种子，给doDiscover服务用
+		"bucketNodeChanel":    make(chan map[string]interface{}, 10), // bucket服务往这个通道输送可用节点，给tcp服务尝试连接。
 	}
 
 	logger.Info(config.ParseNodeID(cnfNet.conf) + "正在启动Cnf网络组件...")

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 
 	"github.com/cnf_core/src/utils/config"
@@ -24,7 +25,7 @@ func (cnfNet *CnfNet) GetLog() map[string]interface{} {
 func (cnfNet *CnfNet) DoLogHTTP() {
 	// return
 	for {
-		timer.Sleep(5000)
+		timer.Sleep(5000 + rand.Intn(3000))
 		client := &http.Client{}
 		netStatus := cnfNet.GetLog()
 

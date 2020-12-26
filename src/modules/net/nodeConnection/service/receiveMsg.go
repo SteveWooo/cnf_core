@@ -4,7 +4,6 @@ import (
 	nodeConnectionModels "github.com/cnf_core/src/modules/net/nodeConnection/models"
 	"github.com/cnf_core/src/utils/config"
 	"github.com/cnf_core/src/utils/error"
-	"github.com/cnf_core/src/utils/logger"
 )
 
 // ReceiveMsg 处理接收nodeConnetion消息，这里主要做分流
@@ -19,7 +18,7 @@ func (ncService *NodeConnectionService) HandleMsg(data interface{}) (interface{}
 
 	// 收到握手请求时，因为很有可能接收方没有一个连接对象。
 	if tcpData.(map[string]interface{})["event"] == "shakeEvent" {
-		logger.Debug(config.ParseNodeID(ncService.conf) + " get shaked")
+		// logger.Debug(config.ParseNodeID(ncService.conf) + " get shaked")
 		return ncService.HandleShakeEvent(data)
 	}
 
