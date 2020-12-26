@@ -53,6 +53,8 @@ func (cnfNet *CnfNet) Run() interface{} {
 		config.ParseNodeID(cnfNet.conf): cnfNet.myPublicChanel,
 	}
 
+	logger.Debug(cnfNet.publicChanels)
+
 	cnfNet.doRun()
 
 	return nil
@@ -62,6 +64,8 @@ func (cnfNet *CnfNet) Run() interface{} {
 func (cnfNet *CnfNet) RunWithPublicChanel(publicChanels map[string]interface{}) interface{} {
 	// 把公共频道赋值给cnfnet对象
 	cnfNet.publicChanels = publicChanels
+
+	logger.Debug(cnfNet.publicChanels)
 
 	cnfNet.doRun()
 
@@ -76,6 +80,7 @@ func (cnfNet *CnfNet) doRun() interface{} {
 		"receiveDiscoverMsgChanel":       make(chan map[string]interface{}, 5), // 管理udp socket中获取到消息的chanel
 		"receiveNodeConnectionMsgChanel": make(chan map[string]interface{}, 5), // 管理tcp socket中获取到消息的chanel
 
+		// 非master节点都能用到
 		"bucketOperateChanel": make(chan map[string]interface{}, 5), // 一般用于添加bucket节点，或seed
 		"bucketSeedChanel":    make(chan map[string]interface{}, 5), // bucket服务往这个通道输送邻居节点、种子，给doDiscover服务用
 		"bucketNodeChanel":    make(chan map[string]interface{}, 1), // bucket服务往这个通道输送可用节点，给tcp服务尝试连接。

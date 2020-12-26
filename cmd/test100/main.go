@@ -18,11 +18,24 @@ func main() {
 		return
 	}
 
-	for i := 0; i < 1000; i++ {
+	COUNT := 2
+
+	publicChanel := make(map[string]interface{})
+	cnfObj := make([]*cnf.Cnf, COUNT)
+
+	for i := 0; i < COUNT; i++ {
 		testConf, _ := config.LoadByPath("../config/test1000/node_" + strconv.Itoa(i) + ".json")
-		var cnf cnf.Cnf
-		cnf.Build(testConf)
-		go cnf.Run()
+		var newCnf cnf.Cnf
+		newCnf.Build(testConf)
+		nodeID, pChanel := newCnf.GetPublicChanel()
+		publicChanel[nodeID] = pChanel
+		cnfObj[i] = &newCnf
+		// go newCnf.Run()
+	}
+
+	for i := 0; i < COUNT; i++ {
+		cnfObj[i].RunWithPublicChanel(publicChanel)
+		// cnfObj[i].Run()
 	}
 
 	// 挂起主协程

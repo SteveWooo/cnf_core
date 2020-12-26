@@ -1,6 +1,8 @@
 package connection
 
 import (
+	commonModels "github.com/cnf_core/src/modules/net/common/models"
+	nodeConnectionModels "github.com/cnf_core/src/modules/net/nodeConnection/models"
 	nodeConnectionService "github.com/cnf_core/src/modules/net/nodeConnection/service"
 	"github.com/cnf_core/src/utils/error"
 )
@@ -30,15 +32,39 @@ func (nc *NodeConnection) RunService(chanels map[string]chan map[string]interfac
 // RunFindConnection 启动节点通信的TCP相关服务
 func (nc *NodeConnection) RunFindConnection(chanels map[string]chan map[string]interface{}) *error.Error {
 	nc.service.RunFindConnection(chanels)
+	// 启动监控，主要防止双向链接
+	go nc.service.RunMonitor()
 	return nil
 }
 
-// ReceiveMsg 接收消息入口
+// ReceiveMsg 接收消息入口 1
 func (nc *NodeConnection) ReceiveMsg(data interface{}) (interface{}, *error.Error) {
 	return nc.service.ReceiveMsg(data)
 }
 
-// HandleMsg 上面的接收消息结束后，再来判断是否要处理这条消息
+// HandleMsg 接收消息入口 2 上面的接收消息结束后，再来判断是否要处理这条消息
 func (nc *NodeConnection) HandleMsg(data interface{}) (interface{}, *error.Error) {
 	return nc.service.HandleMsg(data)
+}
+
+// MasterDoTryOutBoundConnect 反射service函数
+func (nc *NodeConnection) MasterDoTryOutBoundConnect(data interface{}) (interface{}, *error.Error) {
+	newNode := data.(map[string]interface{})["newNode"].(*commonModels.Node)
+	targetNodeID := data.(map[string]interface{})["targetNodeID"].(string)
+	return nc.service.MasterDoTryOutBoundConnect(newNode, targetNodeID)
+}
+
+// SalveHandleNodeOutBoundConnectionCreateEvent 反射service函数
+func (nc *NodeConnection) SalveHandleNodeOutBoundConnectionCreateEvent(nodeConnectionCreateResp map[string]interface{}) {
+	nc.service.SalveHandleNodeOutBoundConnectionCreateEvent(nodeConnectionCreateResp)
+}
+
+// SalveHandleNodeInBoundConnectionCreateEvent 反射service函数
+func (nc *NodeConnection) SalveHandleNodeInBoundConnectionCreateEvent(nodeConnectionCreateResp map[string]interface{}) {
+	nc.service.SalveHandleNodeInBoundConnectionCreateEvent(nodeConnectionCreateResp)
+}
+
+// SendMsg 反射service函数
+func (nc *NodeConnection) SendMsg(nodeConn *nodeConnectionModels.NodeConn, message string) {
+	nc.service.Send(nodeConn, message)
 }

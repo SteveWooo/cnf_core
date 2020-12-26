@@ -12,8 +12,8 @@ import (
 	"github.com/cnf_core/src/utils/timer"
 )
 
-// SendShake 发送握手包
-func (ncService *NodeConnectionService) SendShake(nodeConn *nodeConnectionModels.NodeConn, targetNodeID string) *error.Error {
+// GetShakePackString 获取一个握手包
+func (ncService *NodeConnectionService) GetShakePackString(shaketype string, targetNodeID string) string {
 	confNet := ncService.conf.(map[string]interface{})["net"]
 	now := strconv.FormatInt(timer.Now(), 10)
 	tcpSourceDataMsgFrom := map[string]interface{}{
@@ -33,9 +33,7 @@ func (ncService *NodeConnectionService) SendShake(nodeConn *nodeConnectionModels
 	// msg要转换为字符串。以后要用base64
 	tcpSourceDataMsgJSONString, msgUncodeErr := json.Marshal(tcpSourceDataMsg)
 	if msgUncodeErr != nil {
-		return error.New(map[string]interface{}{
-			"message": "shaker包创建失败，消息部分转码失败",
-		})
+		return ""
 	}
 
 	tcpSourceData := map[string]interface{}{
@@ -44,18 +42,12 @@ func (ncService *NodeConnectionService) SendShake(nodeConn *nodeConnectionModels
 		"targetNodeID": targetNodeID,
 	}
 
-	if nodeConn.GetConnType() == "inBound" {
-		tcpSourceData["event"] = "shakeBackEvent"
-	} else {
-		tcpSourceData["event"] = "shakeEvent"
-	}
+	tcpSourceData["event"] = shaketype
 
 	// var tcpData interface{}
 	tcpData, tcpDataJSONUncodeErr := json.Marshal(tcpSourceData)
 	if tcpDataJSONUncodeErr != nil {
-		return error.New(map[string]interface{}{
-			"message": "shaker包创建失败",
-		})
+		return ""
 	}
 
 	// 消息主体需要先做base64编码，防止乱读。这个其实就是数据包中的content部分
@@ -71,8 +63,20 @@ func (ncService *NodeConnectionService) SendShake(nodeConn *nodeConnectionModels
 	// 封装整个数据包
 	tcpPackage := "hash:" + contentHash + ";content-length:" + strconv.Itoa(contentLength) + ";" + content
 
+	return tcpPackage
+}
+
+// SendShake 发送握手包
+func (ncService *NodeConnectionService) SendShake(nodeConn *nodeConnectionModels.NodeConn, targetNodeID string) *error.Error {
+	var shakePack string = ""
+	if nodeConn.GetConnType() == "inBound" {
+		shakePack = ncService.GetShakePackString("shakeBackEvent", targetNodeID)
+	} else {
+		shakePack = ncService.GetShakePackString("shakeEvent", targetNodeID)
+	}
+
 	// 发送
-	ncService.Send(nodeConn, tcpPackage)
+	ncService.Send(nodeConn, shakePack)
 
 	return nil
 }
@@ -80,5 +84,5 @@ func (ncService *NodeConnectionService) SendShake(nodeConn *nodeConnectionModels
 // Send 底层tcp发包
 func (ncService *NodeConnectionService) Send(nodeConn *nodeConnectionModels.NodeConn, message string) {
 	// logger.Debug("sent:" + message)
-	nodeConn.Socket.Write([]byte(message))
+	(*nodeConn.Socket).Write([]byte(message))
 }

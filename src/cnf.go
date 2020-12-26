@@ -23,11 +23,15 @@ func (cnf *Cnf) Build(conf interface{}) {
 
 	cnf.myPublicChanel = make(map[string]chan map[string]interface{})
 	// 初始化多路复用的公共频道
-	cnf.myPublicChanel["receiveDiscoverMsgChanel"] = make(chan map[string]interface{}, 5)       // 接收Udp消息，扔这里
-	cnf.myPublicChanel["receiveNodeConnectionMsgChanel"] = make(chan map[string]interface{}, 5) // 接收tcp消息，扔这里
+	cnf.myPublicChanel["receiveDiscoverMsgChanel"] = make(chan map[string]interface{}, 5) // 接收Udp消息，主节点把消息扔这里
+	cnf.myPublicChanel["sendDiscoverMsgChanel"] = make(chan map[string]interface{}, 5)    // 要发送udp数据，扔这里
 
-	cnf.myPublicChanel["sendDiscoverMsgChanel"] = make(chan map[string]interface{}, 5)       // 要发送udp数据，扔这里
-	cnf.myPublicChanel["sendNodeConnectionMsgChanel"] = make(chan map[string]interface{}, 5) // 要发送tcp数据，扔这里
+	// 关于tcp连接创建的
+	cnf.myPublicChanel["submitNodeConnectionCreateChanel"] = make(chan map[string]interface{}, 1)  // 子节点需要创建TCP连接的话，子节点就往这里扔一个请求
+	cnf.myPublicChanel["receiveNodeConnectionCreateChanel"] = make(chan map[string]interface{}, 1) // 主节点创建连接成功，并握手成功的，就把conn对象扔回这个chanel里面
+
+	cnf.myPublicChanel["receiveNodeConnectionMsgChanel"] = make(chan map[string]interface{}, 5) // 接收到tcp消息，主节点把消息扔这里
+	cnf.myPublicChanel["sendNodeConnectionMsgChanel"] = make(chan map[string]interface{}, 1)    // 子节点发送tcp消息的
 
 	// 网络层入口构建
 	cnf.cnfNet.Build(conf, cnf.myPublicChanel)

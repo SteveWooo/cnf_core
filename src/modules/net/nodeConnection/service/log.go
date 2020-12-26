@@ -14,10 +14,15 @@ func (ncService *NodeConnectionService) GetStatus() map[string]interface{} {
 		}
 		// 握手失败的也不需要
 		if nodeConn.IsShaked() == false {
-			// continue
+			continue
 		}
 
-		inBoundConn = append(inBoundConn, nodeConn.GetNodeID())
+		if nodeConn.IsShaked() == true {
+			inBoundConn = append(inBoundConn, "shaked: "+nodeConn.GetNodeID())
+		} else {
+			inBoundConn = append(inBoundConn, nodeConn.GetNodeID())
+		}
+
 	}
 
 	for i := 0; i < len(ncService.outBoundConn); i++ {
@@ -27,10 +32,14 @@ func (ncService *NodeConnectionService) GetStatus() map[string]interface{} {
 		}
 		// 握手失败的也不需要
 		if nodeConn.IsShaked() == false {
-			// continue
+			continue
 		}
 
-		outBoundConn = append(outBoundConn, nodeConn.GetNodeID())
+		if nodeConn.IsShaked() == true {
+			outBoundConn = append(outBoundConn, "shaked: "+nodeConn.GetNodeID())
+		} else {
+			outBoundConn = append(outBoundConn, nodeConn.GetNodeID())
+		}
 	}
 
 	serviceStatus["outBoundConn"] = outBoundConn

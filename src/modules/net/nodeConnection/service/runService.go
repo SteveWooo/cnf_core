@@ -18,6 +18,7 @@ func (ncService *NodeConnectionService) RunService(chanels map[string]chan map[s
 	// 非主节点，不需要监听socket
 	confNet := ncService.conf.(map[string]interface{})["net"]
 	if confNet.(map[string]interface{})["masterServer"] != "true" {
+		logger.Debug("非主节点，无需监听")
 		signal <- true
 		return nil
 	}
@@ -46,30 +47,29 @@ func (ncService *NodeConnectionService) RunService(chanels map[string]chan map[s
 		// 先处理好这个conn，再去处理他收到的消息
 		remoteAddr := conn.RemoteAddr()
 		var nodeConn nodeConnectionModels.NodeConn
-		nodeConn.Build(conn, "inBound")
+		nodeConn.Build(&conn, "inBound")
 		nodeConn.SetRemoteAddr(remoteAddr.String())
 
-		// 不允许同样的tcp地址端口重复连接
-		if ncService.CheckBoundAddress(nodeConn.GetSenderIP(), nodeConn.GetSenderServicePort()) == true {
-			nodeConn.Socket.Close()
-			continue
-		}
-
-		// 如果inbound无空位，则放弃掉这条连接
-		if ncService.IsInBoundFull() == true {
-			nodeConn.Socket.Close()
-			continue
-		}
-
 		// 添加一个未握手的连接到InBoundConn里面去
-		addConnErr := ncService.AddInBoundConn(&nodeConn)
+		addConnErr := ncService.AddInBoundSocket(&nodeConn)
 		if addConnErr != nil {
 			// 连接失败就要关闭掉这条socket
-			nodeConn.Socket.Close()
+			(*nodeConn.Socket).Close()
 			continue
 		}
 
+		// logger.Debug("create a new inBound")
 		go ncService.ProcessInboundTCPData(&nodeConn)
+	}
+}
+
+// SalveHandleNodeInBoundConnectionCreateEvent 子节点处理节点创建成功事件。（但是不知道应该给哪个子节点）
+func (ncService *NodeConnectionService) SalveHandleNodeInBoundConnectionCreateEvent(nodeConnectionCreateResp map[string]interface{}) {
+	nodeConn := nodeConnectionCreateResp["nodeConn"].(*nodeConnectionModels.NodeConn)
+	addConnErr := ncService.AddInBoundConn(nodeConn)
+	if addConnErr != nil {
+		logger.Error("子节点中，添加节点到inbound失败")
+		return
 	}
 }
 
@@ -79,10 +79,10 @@ func (ncService *NodeConnectionService) ProcessInboundTCPData(nodeConn *nodeConn
 	for {
 		tcpSourceDataByte := make([]byte, 1024)
 
-		length, readErr := nodeConn.Socket.Read(tcpSourceDataByte)
+		length, readErr := (*nodeConn.Socket).Read(tcpSourceDataByte)
 		if readErr != nil {
 			// 读取数据失败，说明socket已经断掉，所以要结束这个socket
-			nodeConn.Socket.Close()
+			(*nodeConn.Socket).Close()
 			ncService.DeleteInBoundConn(nodeConn)
 
 			// 释放一个inBound限制

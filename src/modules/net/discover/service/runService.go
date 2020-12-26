@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/cnf_core/src/utils/error"
+	"github.com/cnf_core/src/utils/logger"
 	"github.com/cnf_core/src/utils/sign"
 )
 
@@ -16,6 +17,7 @@ func (discoverService *DiscoverService) RunService(chanels map[string]chan map[s
 	// 非主节点，不需要监听socket
 	confNet := discoverService.conf.(map[string]interface{})["net"]
 	if confNet.(map[string]interface{})["masterServer"] != "true" {
+		logger.Debug("非主节点，无需监听")
 		signal <- true
 		return nil
 	}
