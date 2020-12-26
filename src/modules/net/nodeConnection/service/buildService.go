@@ -6,7 +6,6 @@ import (
 	commonModels "github.com/cnf_core/src/modules/net/common/models"
 	nodeConnectionModels "github.com/cnf_core/src/modules/net/nodeConnection/models"
 	"github.com/cnf_core/src/utils/error"
-	"github.com/cnf_core/src/utils/logger"
 )
 
 var INBOUND_CONN_MAX int = 117
@@ -68,7 +67,7 @@ func (ncService *NodeConnectionService) Build(conf interface{}, myPublicChanel m
 	// 设置tcp消息读取协程上限(目前没用上，做成高性能tcp服务器需要用到，参考UDP服务部分实现)
 	ncService.limitProcessTCPData = make(chan bool, 5)
 
-	logger.Info("NodeConn TCP 服务创建成功，即将监听 " + address)
+	// logger.Info("NodeConn TCP 服务创建成功，即将监听 " + address)
 
 	return nil
 }

@@ -112,6 +112,9 @@ func (nodeConn *NodeConn) GetConnType() string {
 
 // GetSocket 反射
 func (nodeConn *NodeConn) GetSocket() *net.Conn {
+	if nodeConn == nil {
+		return nil
+	}
 	return nodeConn.Socket
 }
 

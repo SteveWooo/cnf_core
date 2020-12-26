@@ -18,13 +18,13 @@ func main() {
 		return
 	}
 
-	COUNT := 2
+	COUNT := 600
 
 	publicChanel := make(map[string]interface{})
 	cnfObj := make([]*cnf.Cnf, COUNT)
 
 	for i := 0; i < COUNT; i++ {
-		testConf, _ := config.LoadByPath("../config/test1000/node_" + strconv.Itoa(i) + ".json")
+		testConf, _ := config.LoadByPath("../config/test1000Local/node_" + strconv.Itoa(i) + ".json")
 		var newCnf cnf.Cnf
 		newCnf.Build(testConf)
 		nodeID, pChanel := newCnf.GetPublicChanel()
@@ -35,7 +35,7 @@ func main() {
 
 	for i := 0; i < COUNT; i++ {
 		go cnfObj[i].RunWithPublicChanel(publicChanel)
-		// cnfObj[i].Run()
+		// go cnfObj[i].Run()
 	}
 
 	// 挂起主协程

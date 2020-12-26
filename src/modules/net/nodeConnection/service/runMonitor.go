@@ -1,6 +1,10 @@
 package services
 
 import (
+	"strconv"
+
+	"github.com/cnf_core/src/utils/config"
+	"github.com/cnf_core/src/utils/logger"
 	"github.com/cnf_core/src/utils/timer"
 )
 
@@ -29,6 +33,16 @@ func (ncService *NodeConnectionService) RunMonitor() {
 				// logger.Debug("clear outBound")
 				ncService.DeleteOutBoundConn(ncService.outBoundConn[i])
 			}
+		}
+		// localNODE1: 044eb742421d2e24342983c2f6248fbe5400d855d952cdf6bd6f64117696d729a3e0fbaff48863237f510ce4645197a216b5cc2cedff17e3cef7e0d4366d7291e8
+		// socketNode1 : 043eb06ad52d601c563950c454445b0345e5fcfe5f0036b8b86aef4eb3e2825f15ddcc5ed27bd9645d710505dcb819c0fbca9dae7f612867f59364583e5ec7fbb9
+		if config.ParseNodeID(ncService.conf) != "044eb742421d2e24342983c2f6248fbe5400d855d952cdf6bd6f64117696d729a3e0fbaff48863237f510ce4645197a216b5cc2cedff17e3cef7e0d4366d7291e8" {
+
+			// logger.Debug("masterInBoundConn: " + strconv.Itoa(len(ncService.masterInBoundConn)))
+			// logger.Debug("masterOutBoundConn: " + strconv.Itoa(len(ncService.masterOutBoundConn)))
+
+			logger.Debug("InBoundConn: " + strconv.Itoa(len(ncService.inBoundConn)))
+			logger.Debug("OutBoundConn: " + strconv.Itoa(len(ncService.outBoundConn)))
 		}
 	}
 }

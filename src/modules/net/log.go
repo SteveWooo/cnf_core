@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/cnf_core/src/utils/config"
-	logger "github.com/cnf_core/src/utils/logger"
 	"github.com/cnf_core/src/utils/timer"
 )
 
@@ -23,6 +22,7 @@ func (cnfNet *CnfNet) GetLog() map[string]interface{} {
 
 // DoLogHTTP 不断发送日志
 func (cnfNet *CnfNet) DoLogHTTP() {
+	// return
 	for {
 		timer.Sleep(5000)
 		client := &http.Client{}
@@ -36,7 +36,7 @@ func (cnfNet *CnfNet) DoLogHTTP() {
 		req, _ := http.NewRequest("POST", "http://localhost:8081/api/update_node_status", bytes.NewReader(httpBodyJSON))
 		resp, doErr := client.Do(req)
 		if doErr != nil {
-			logger.Debug(doErr)
+			// logger.Debug(doErr)
 			continue
 		}
 		body, _ := ioutil.ReadAll(resp.Body)

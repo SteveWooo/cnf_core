@@ -18,7 +18,7 @@ func (ncService *NodeConnectionService) RunService(chanels map[string]chan map[s
 	// 非主节点，不需要监听socket
 	confNet := ncService.conf.(map[string]interface{})["net"]
 	if confNet.(map[string]interface{})["masterServer"] != "true" {
-		logger.Debug("非主节点，无需监听")
+		// logger.Debug("非主节点，无需监听")
 		signal <- true
 		return nil
 	}
@@ -81,9 +81,7 @@ func (ncService *NodeConnectionService) ProcessInboundTCPData(nodeConn *nodeConn
 
 		length, readErr := (*nodeConn.Socket).Read(tcpSourceDataByte)
 		if readErr != nil {
-			// 读取数据失败，说明socket已经断掉，所以要结束这个socket
-			(*nodeConn.Socket).Close()
-			ncService.DeleteInBoundConn(nodeConn)
+			// TODO 连接失败要全部子节点都断掉
 
 			// 释放一个inBound限制
 			<-ncService.limitTCPInboundConn

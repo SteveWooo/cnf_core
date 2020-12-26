@@ -18,9 +18,9 @@ func (ncService *NodeConnectionService) GetStatus() map[string]interface{} {
 		}
 
 		if nodeConn.IsShaked() == true {
-			inBoundConn = append(inBoundConn, "shaked: "+nodeConn.GetNodeID())
-		} else {
 			inBoundConn = append(inBoundConn, nodeConn.GetNodeID())
+		} else {
+			// inBoundConn = append(inBoundConn, nodeConn.GetNodeID())
 		}
 
 	}
@@ -36,9 +36,9 @@ func (ncService *NodeConnectionService) GetStatus() map[string]interface{} {
 		}
 
 		if nodeConn.IsShaked() == true {
-			outBoundConn = append(outBoundConn, "shaked: "+nodeConn.GetNodeID())
-		} else {
 			outBoundConn = append(outBoundConn, nodeConn.GetNodeID())
+		} else {
+			// outBoundConn = append(outBoundConn, nodeConn.GetNodeID())
 		}
 	}
 

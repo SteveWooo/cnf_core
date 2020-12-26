@@ -5,7 +5,6 @@ import (
 
 	discoverModel "github.com/cnf_core/src/modules/net/discover/models"
 	"github.com/cnf_core/src/utils/error"
-	"github.com/cnf_core/src/utils/logger"
 )
 
 // DiscoverService 发现服务
@@ -56,6 +55,6 @@ func (discoverService *DiscoverService) Build(conf interface{}, myPublicChanel m
 	}
 	discoverService.socketAddr = udpAddr
 
-	logger.Info("Discover UDP 服务创建成功，即将监听 " + address)
+	// logger.Info("Discover UDP 服务创建成功，即将监听 " + address)
 	return nil
 }

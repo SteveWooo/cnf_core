@@ -68,3 +68,8 @@ func (nc *NodeConnection) SalveHandleNodeInBoundConnectionCreateEvent(nodeConnec
 func (nc *NodeConnection) SendMsg(nodeConn *nodeConnectionModels.NodeConn, message string) {
 	nc.service.Send(nodeConn, message)
 }
+
+// ParseTCPData 反射函数
+func (nc *NodeConnection) ParseTCPData(tcpSourceData string) (interface{}, *error.Error) {
+	return nc.service.ParseTCPData(tcpSourceData)
+}

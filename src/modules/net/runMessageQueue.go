@@ -30,7 +30,7 @@ func (cnfNet *CnfNet) RunMessageQueue(chanels map[string]chan map[string]interfa
 	// nodeConn 子节点消息发送队列处理
 	go cnfNet.HandleSubNodeSendNodeConnectionMsg(chanels)
 
-	logger.Info("消息队列启动完成")
+	// logger.Info("消息队列启动完成")
 }
 
 // HandleDiscoverMsgReceive 关于发现服务的消息处理
@@ -44,7 +44,7 @@ func (cnfNet *CnfNet) HandleDiscoverMsgReceive(chanels map[string]chan map[strin
 			if exist {
 				chanel.(map[string]chan map[string]interface{})["receiveDiscoverMsgChanel"] <- udpData
 			} else {
-				logger.Error("接收到未知Udp数据包，本服务器无该节点")
+				logger.Error("接收到未知Udp数据包，本服务器无该节点 - 1:" + udpData["targetNodeID"].(string))
 			}
 		}
 	}
@@ -62,7 +62,7 @@ func (cnfNet *CnfNet) HandleSubNodeDiscoverMsgReceive(chanels map[string]chan ma
 		bucketOperate, receiveErr := cnfNet.discover.ReceiveMsg(udpData)
 		if receiveErr != nil {
 			// 不处理
-			logger.Warn(receiveErr.GetMessage())
+			// logger.Warn(receiveErr.GetMessage())
 			continue
 		}
 
@@ -152,21 +152,20 @@ func (cnfNet *CnfNet) HandleSubNodeSendNodeConnectionMsg(chanels map[string]chan
 			getSubNodeSendNodeConnectionMsgReq := func(nid string, c map[string]chan map[string]interface{}) {
 				for {
 					sendNodeConnectionMsgReq := <-c["sendNodeConnectionMsgChanel"]
-					nodeConn := sendNodeConnectionMsgReq["nodeConn"].(*nodeConnectionModels.NodeConn)
 					tcpMessage := sendNodeConnectionMsgReq["message"].(string)
 					// 本地节点消息，直接发送即可
-					if nodeConn.GetSocket() == nil {
-						if nodeConn.GetSenderIP() == confNet.(map[string]interface{})["ip"] && nodeConn.GetSenderServicePort() == confNet.(map[string]interface{})["servicePort"] {
-							// TODO 直接转发给本地节点，不需要走socket，但怎么处理这个nodeConn呢？
-							chanels["receiveNodeConnectionMsgChanel"] <- map[string]interface{}{
-								"nodeConn":    nodeConn,
-								"tcpData":     tcpMessage,
-								"messageFrom": "inBound",
-							}
+					if sendNodeConnectionMsgReq["nodeConn"] == nil || sendNodeConnectionMsgReq["nodeConn"].(*nodeConnectionModels.NodeConn).GetSocket() == nil {
+						// 直接转发给本地节点，不需要走socket
+						tcpData, _ := cnfNet.nodeConnection.ParseTCPData(tcpMessage)
+						chanels["receiveNodeConnectionMsgChanel"] <- map[string]interface{}{
+							"nodeConn":     nil,
+							"tcpData":      tcpData,
+							"localMessage": true,
 						}
 					}
 
-					// 使用socket发送数据报文
+					// 非本地节点，使用socket发送数据报文
+					nodeConn := sendNodeConnectionMsgReq["nodeConn"].(*nodeConnectionModels.NodeConn)
 					if nodeConn.GetSocket() != nil {
 						cnfNet.nodeConnection.SendMsg(nodeConn, tcpMessage)
 					}
@@ -186,6 +185,7 @@ func (cnfNet *CnfNet) HandleNodeConnectionMsgReceive(chanels map[string]chan map
 			tcpData := connectionMsg["tcpData"]
 
 			// logger.Debug(tcpData)
+			// TODO 如果nodeConn为nil，就创建一个。因为是本地连接
 
 			chanel, exist := cnfNet.publicChanels[tcpData.(map[string]interface{})["targetNodeID"].(string)]
 			if exist {

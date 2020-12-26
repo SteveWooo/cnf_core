@@ -4,6 +4,7 @@ import (
 	nodeConnectionModels "github.com/cnf_core/src/modules/net/nodeConnection/models"
 	"github.com/cnf_core/src/utils/config"
 	"github.com/cnf_core/src/utils/error"
+	"github.com/cnf_core/src/utils/logger"
 )
 
 // ReceiveMsg 处理接收nodeConnetion消息，这里主要做分流
@@ -18,7 +19,7 @@ func (ncService *NodeConnectionService) HandleMsg(data interface{}) (interface{}
 
 	// 收到握手请求时，因为很有可能接收方没有一个连接对象。
 	if tcpData.(map[string]interface{})["event"] == "shakeEvent" {
-		// logger.Debug("get shaked")
+		logger.Debug(config.ParseNodeID(ncService.conf) + " get shaked")
 		return ncService.HandleShakeEvent(data)
 	}
 
@@ -36,7 +37,10 @@ func (ncService *NodeConnectionService) HandleMsg(data interface{}) (interface{}
 // 只有inBound连接，才有可能收到shakerEvent，所以收到shake就必然回复一个shakeBack
 func (ncService *NodeConnectionService) HandleShakeEvent(data interface{}) (interface{}, *error.Error) {
 	// 这是主节点的conn。主节点的conn收到这个子节点的shake请求
-	nodeConn := data.(map[string]interface{})["nodeConn"].(*nodeConnectionModels.NodeConn)
+	var nodeConn *nodeConnectionModels.NodeConn = nil
+	if data.(map[string]interface{})["nodeConn"] != nil {
+		nodeConn = data.(map[string]interface{})["nodeConn"].(*nodeConnectionModels.NodeConn)
+	}
 	tcpData := data.(map[string]interface{})["tcpData"]
 	remoteNodeID := tcpData.(map[string]interface{})["nodeID"].(string)
 
@@ -78,15 +82,24 @@ func (ncService *NodeConnectionService) HandleShakeEvent(data interface{}) (inte
 			"nodeConn": nodeConn,
 			"message":  shakeDestroyString,
 		}
+
+		return nil, nil
 	}
 
+	cnfNet := ncService.conf.(map[string]interface{})["net"]
 	// 如果我inBound和outbound之中，有或者无连接了你，但还没shake成功，那我就shakeBack，然后把你加入到我的inBound桶中，同时setShake
 	if alreadyShake == false {
 		// 创建一个inBound nodeConn，复制主节点conn的内容过来
 
 		var newNodeConn nodeConnectionModels.NodeConn
-		newNodeConn.Build(nodeConn.GetSocket(), "inBound")
-		newNodeConn.SetRemoteAddr((*nodeConn.GetSocket()).RemoteAddr().String())
+		if nodeConn == nil {
+			newNodeConn.Build(nil, "inBound")
+			newNodeConn.SetRemoteAddr(cnfNet.(map[string]interface{})["ip"].(string) + ":" + cnfNet.(map[string]interface{})["servicePort"].(string))
+		} else {
+			newNodeConn.Build(nodeConn.GetSocket(), "inBound")
+			newNodeConn.SetRemoteAddr((*nodeConn.GetSocket()).RemoteAddr().String())
+		}
+
 		newNodeConn.SetNodeID(remoteNodeID)
 		newNodeConn.SetTargetNodeID(config.ParseNodeID(ncService.conf))
 

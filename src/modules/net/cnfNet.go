@@ -86,19 +86,19 @@ func (cnfNet *CnfNet) doRun() interface{} {
 		"bucketNodeChanel":    make(chan map[string]interface{}, 1), // bucket服务往这个通道输送可用节点，给tcp服务尝试连接。
 	}
 
-	logger.Info("正在启动Cnf网络组件...")
+	logger.Info(config.ParseNodeID(cnfNet.conf) + "正在启动Cnf网络组件...")
 
 	// 启动发现服务
 	signal := make(chan bool, 1)
 	// go discoverService.RunService(chanels, signal)
 	go cnfNet.discover.RunService(chanels, signal)
 	<-signal
-	logger.Info("Discover UDP 服务监听成功")
+	// logger.Info("Discover UDP 服务监听成功")
 
 	// 启动tcp数据接收服务
 	go cnfNet.nodeConnection.RunService(chanels, signal)
 	<-signal
-	logger.Info("NodeConn TCP 服务监听成功")
+	// logger.Info("NodeConn TCP 服务监听成功")
 
 	// 启动路由桶服务，
 	// 获取、推送种子节点
