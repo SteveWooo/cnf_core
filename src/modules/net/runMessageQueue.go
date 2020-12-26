@@ -56,7 +56,7 @@ func (cnfNet *CnfNet) HandleSubNodeDiscoverMsgReceive(chanels map[string]chan ma
 		myNodeID := config.ParseNodeID(cnfNet.conf)
 		udpData := <-cnfNet.publicChanels[myNodeID].(map[string]chan map[string]interface{})["receiveDiscoverMsgChanel"]
 
-		logger.Debug(udpData)
+		// logger.Debug(udpData)
 
 		// 交给发现服务模块处理消息，把结果透传回来即可
 		bucketOperate, receiveErr := cnfNet.discover.ReceiveMsg(udpData)
@@ -157,7 +157,12 @@ func (cnfNet *CnfNet) HandleSubNodeSendNodeConnectionMsg(chanels map[string]chan
 					// 本地节点消息，直接发送即可
 					if nodeConn.GetSocket() == nil {
 						if nodeConn.GetSenderIP() == confNet.(map[string]interface{})["ip"] && nodeConn.GetSenderServicePort() == confNet.(map[string]interface{})["servicePort"] {
-							// TODO 直接转发给本地节点，不需要走socket
+							// TODO 直接转发给本地节点，不需要走socket，但怎么处理这个nodeConn呢？
+							chanels["receiveNodeConnectionMsgChanel"] <- map[string]interface{}{
+								"nodeConn":    nodeConn,
+								"tcpData":     tcpMessage,
+								"messageFrom": "inBound",
+							}
 						}
 					}
 

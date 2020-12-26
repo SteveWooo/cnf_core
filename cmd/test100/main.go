@@ -34,7 +34,7 @@ func main() {
 	}
 
 	for i := 0; i < COUNT; i++ {
-		cnfObj[i].RunWithPublicChanel(publicChanel)
+		go cnfObj[i].RunWithPublicChanel(publicChanel)
 		// cnfObj[i].Run()
 	}
 

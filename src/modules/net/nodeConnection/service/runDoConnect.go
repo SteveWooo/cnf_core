@@ -72,7 +72,7 @@ func (ncService *NodeConnectionService) MasterDoTryOutBoundConnect(newNode *comm
 	// 如果是本地连本地，那就返回一个空socket的nodeConn回去即可
 	cnfNet := ncService.conf.(map[string]interface{})["net"]
 	if newNode.GetIP() == cnfNet.(map[string]interface{})["ip"] && newNode.GetServicePort() == cnfNet.(map[string]interface{})["servicePort"] {
-		logger.Debug("本地连接创立！")
+		// logger.Debug("本地连接创立！")
 		var nodeConn nodeConnectionModels.NodeConn
 		nodeConn.Build(nil, "outBound")
 		nodeConn.SetRemoteAddr(newNode.GetIP() + ":" + newNode.GetServicePort())

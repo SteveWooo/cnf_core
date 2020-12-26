@@ -53,7 +53,7 @@ func (cnfNet *CnfNet) Run() interface{} {
 		config.ParseNodeID(cnfNet.conf): cnfNet.myPublicChanel,
 	}
 
-	logger.Debug(cnfNet.publicChanels)
+	// logger.Debug(cnfNet.publicChanels)
 
 	cnfNet.doRun()
 
@@ -65,7 +65,7 @@ func (cnfNet *CnfNet) RunWithPublicChanel(publicChanels map[string]interface{}) 
 	// 把公共频道赋值给cnfnet对象
 	cnfNet.publicChanels = publicChanels
 
-	logger.Debug(cnfNet.publicChanels)
+	// logger.Debug(cnfNet.publicChanels)
 
 	cnfNet.doRun()
 
