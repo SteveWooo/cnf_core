@@ -21,6 +21,7 @@ func (discoverService *DiscoverService) RunService(chanels map[string]chan map[s
 		return nil
 	}
 
+	discoverService.myPrivateChanel = make(map[string]chan map[string]interface{})
 	discoverService.myPrivateChanel = chanels
 
 	udpConn, listenErr := net.ListenUDP("udp", discoverService.socketAddr)
@@ -65,6 +66,7 @@ func (discoverService *DiscoverService) ProcessUDPData(chanel chan map[string]in
 	udpSourceData["sourceIP"] = info.IP.String()
 	udpSourceData["sourceServicePort"] = strconv.Itoa(info.Port)
 
+	// 🐎这里会卡一下，影响UDP端口读取性能
 	udpData, parseUDPError := discoverService.ParseUDPData(udpSourceData)
 	if parseUDPError != nil {
 		return parseUDPError

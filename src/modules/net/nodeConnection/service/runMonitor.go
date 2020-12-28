@@ -12,7 +12,7 @@ import (
 func (ncService *NodeConnectionService) RunMonitor() {
 	for {
 		// timer.Sleep(1000)
-		timer.Sleep(1000 + rand.Intn(1000))
+		timer.Sleep(3000 + rand.Intn(3000))
 		// 重复检查是否存在需要destroy的连接。有就从桶里删除
 		for i := 0; i < len(ncService.inBoundConn); i++ {
 			if ncService.inBoundConn[i] == nil {
@@ -20,7 +20,7 @@ func (ncService *NodeConnectionService) RunMonitor() {
 			}
 
 			if ncService.inBoundConn[i].GetDestroy() == true {
-				// logger.Debug("clear inBound")
+				// logger.Debug("clean inBound")
 				ncService.DeleteInBoundConn(ncService.inBoundConn[i])
 			}
 		}
@@ -31,7 +31,7 @@ func (ncService *NodeConnectionService) RunMonitor() {
 			}
 
 			if ncService.outBoundConn[i].GetDestroy() == true {
-				// logger.Debug("clear outBound")
+				// logger.Debug("clean outBound")
 				ncService.DeleteOutBoundConn(ncService.outBoundConn[i])
 			}
 		}

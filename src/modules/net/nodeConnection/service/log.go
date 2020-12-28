@@ -7,6 +7,9 @@ func (ncService *NodeConnectionService) GetStatus() map[string]interface{} {
 	// 处理连接情况
 	var outBoundConn []string
 	var inBoundConn []string
+
+	var outBoundConnHashMap map[string]bool = make(map[string]bool)
+	var inBoundConnHashMap map[string]bool = make(map[string]bool)
 	for i := 0; i < len(ncService.inBoundConn); i++ {
 		nodeConn := ncService.inBoundConn[i]
 		if nodeConn == nil {
@@ -19,6 +22,7 @@ func (ncService *NodeConnectionService) GetStatus() map[string]interface{} {
 
 		if nodeConn.IsShaked() == true {
 			inBoundConn = append(inBoundConn, nodeConn.GetNodeID())
+			inBoundConnHashMap[nodeConn.GetNodeID()] = true
 		} else {
 			// inBoundConn = append(inBoundConn, nodeConn.GetNodeID())
 		}
@@ -37,13 +41,16 @@ func (ncService *NodeConnectionService) GetStatus() map[string]interface{} {
 
 		if nodeConn.IsShaked() == true {
 			outBoundConn = append(outBoundConn, nodeConn.GetNodeID())
+			outBoundConnHashMap[nodeConn.GetNodeID()] = true
 		} else {
 			// outBoundConn = append(outBoundConn, nodeConn.GetNodeID())
 		}
 	}
 
 	serviceStatus["outBoundConn"] = outBoundConn
+	serviceStatus["outBoundConnHashMap"] = outBoundConnHashMap
 	serviceStatus["inBoundConn"] = inBoundConn
+	serviceStatus["inBoundConnHashMap"] = inBoundConnHashMap
 
 	return serviceStatus
 }

@@ -178,6 +178,19 @@ func (bucket *Bucket) IsNodeExist(n *commonModels.Node) bool {
 		}
 	}
 
+	for i := 0; i < len(bucket.triedBucket); i++ {
+		for k := 0; k < len(bucket.triedBucket[i]); k++ {
+			b := bucket.triedBucket[i][k]
+			if b == nil {
+				continue
+			}
+			if b.GetNodeID() == n.GetNodeID() {
+				<-bucket.kv
+				return true
+			}
+		}
+	}
+
 	<-bucket.kv
 
 	return false

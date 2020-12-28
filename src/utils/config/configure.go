@@ -7,7 +7,6 @@ import (
 	filepath "path/filepath"
 
 	error "github.com/cnf_core/src/utils/error"
-	"github.com/cnf_core/src/utils/sign"
 )
 
 var config interface{}
@@ -82,7 +81,8 @@ func GetNetConf() interface{} {
 func GetNodeID() string {
 	conf := GetConfig()
 	confNet := conf.(map[string]interface{})["net"]
-	nodeID := sign.GetPublicKey(confNet.(map[string]interface{})["localPrivateKey"].(string))
+	// nodeID := sign.GetPublicKey(confNet.(map[string]interface{})["localPrivateKey"].(string))
+	nodeID := confNet.(map[string]interface{})["publicKey"].(string)
 
 	return nodeID
 }
@@ -96,6 +96,7 @@ func SetConfig(conf interface{}) {
 // @param conf interface{} 配置文件
 func ParseNodeID(conf interface{}) string {
 	confNet := conf.(map[string]interface{})["net"]
-	nodeID := sign.GetPublicKey(confNet.(map[string]interface{})["localPrivateKey"].(string))
+	// nodeID := sign.GetPublicKey(confNet.(map[string]interface{})["localPrivateKey"].(string))
+	nodeID := confNet.(map[string]interface{})["publicKey"].(string)
 	return nodeID
 }

@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 
 	btcec "github.com/cnf_core/pkg/btcec"
-	error "github.com/cnf_core/src/utils/error"
 )
 
 /**
@@ -41,33 +40,38 @@ func GetPublicKey(privateKey string) string {
  * @param msg string 需要加密的字符串
  * @param privateKey string 密钥
  */
-func Sign(msg string, privateKeyStr string) (string, interface{}) {
-	if len(privateKeyStr) != 64 {
-		return "", error.New(map[string]interface{}{
-			"message": "不合法私钥",
-		})
-	}
+func Sign(msg string, privateKeyStr string, publicKeyStr string) (string, interface{}) {
+	// if len(privateKeyStr) != 64 {
+	// 	return "", error.New(map[string]interface{}{
+	// 		"message": "不合法私钥",
+	// 	})
+	// }
 
-	if len(msg) != 64 {
-		return "", error.New(map[string]interface{}{
-			"message": "签名内容不合法",
-		})
-	}
+	// if len(msg) != 64 {
+	// 	return "", error.New(map[string]interface{}{
+	// 		"message": "签名内容不合法",
+	// 	})
+	// }
 
-	privateKeyByte, _ := hex.DecodeString(privateKeyStr)
-	privateKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), privateKeyByte)
+	// privateKeyByte, _ := hex.DecodeString(privateKeyStr)
+	// privateKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), privateKeyByte)
 
-	msgByte, _ := hex.DecodeString(msg)
+	// msgByte, _ := hex.DecodeString(msg)
 
-	// 使用可以从签名中恢复出公钥的方式签名。
-	signature, signErr := btcec.SignCompact(btcec.S256(), privateKey, msgByte, false)
-	if signErr != nil {
-		return "", error.New(map[string]interface{}{
-			"message":   "签名失败",
-			"originErr": signErr,
-		})
-	}
-	return hex.EncodeToString(signature), nil
+	// // 使用可以从签名中恢复出公钥的方式签名。
+	// signature, signErr := btcec.SignCompact(btcec.S256(), privateKey, msgByte, false)
+	// if signErr != nil {
+	// 	return "", error.New(map[string]interface{}{
+	// 		"message":   "签名失败",
+	// 		"originErr": signErr,
+	// 	})
+	// }
+
+	// return hex.EncodeToString(signature), nil
+
+	// 为了优化性能，不签名了，直接把publicID放出来
+	// return GetPublicKey(privateKeyStr), nil
+	return publicKeyStr, nil
 }
 
 /**
@@ -98,33 +102,36 @@ func Verify(signatureStr string, msg string, publicKeyStr string) bool {
  * @param msg string 被签注的消息
  */
 func Recover(signatureStr string, msg string, recid uint64) (string, interface{}) {
-	if len(msg) != 64 {
-		return "", error.New(map[string]interface{}{
-			"message": "签名内容不合法",
-		})
-	}
+	// if len(msg) != 64 {
+	// 	return "", error.New(map[string]interface{}{
+	// 		"message": "签名内容不合法",
+	// 	})
+	// }
 
-	msgByte, _ := hex.DecodeString(msg)
+	// msgByte, _ := hex.DecodeString(msg)
 
-	if recid == 1 {
-		signatureStr = "1c" + signatureStr
-	}
+	// if recid == 1 {
+	// 	signatureStr = "1c" + signatureStr
+	// }
 
-	if recid == 0 {
-		signatureStr = "1b" + signatureStr
-	}
+	// if recid == 0 {
+	// 	signatureStr = "1b" + signatureStr
+	// }
 
-	signBytes, _ := hex.DecodeString(signatureStr)
+	// signBytes, _ := hex.DecodeString(signatureStr)
 
-	publicKey, _, recoverErr := btcec.RecoverCompact(btcec.S256(), signBytes, msgByte)
-	if recoverErr != nil {
-		return "", error.New(map[string]interface{}{
-			"message":   "公钥恢复失败",
-			"originErr": recoverErr,
-		})
-	}
+	// publicKey, _, recoverErr := btcec.RecoverCompact(btcec.S256(), signBytes, msgByte)
+	// if recoverErr != nil {
+	// 	return "", error.New(map[string]interface{}{
+	// 		"message":   "公钥恢复失败",
+	// 		"originErr": recoverErr,
+	// 	})
+	// }
 
-	return hex.EncodeToString(publicKey.SerializeUncompressed()), nil
+	// return hex.EncodeToString(publicKey.SerializeUncompressed()), nil
+
+	// 为了优化性能，sign参数直接就是NodeID了
+	return "04" + signatureStr, nil
 }
 
 /**

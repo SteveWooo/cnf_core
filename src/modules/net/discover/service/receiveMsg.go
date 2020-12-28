@@ -15,10 +15,16 @@ func (discoverService *DiscoverService) ReceiveMsg(data interface{}) (interface{
 	sourceIP := data.(map[string]interface{})["sourceIP"].(string)
 	sourceServicePort := data.(map[string]interface{})["sourceServicePort"].(string)
 	// logger.Debug(config.ParseNodeID(discoverService.conf) + " receive : " + msg.(map[string]interface{})["type"].(string) + " from: " + nodeID)
+	// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " receive : " + msg.(map[string]interface{})["type"].(string))
+	// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " lock")
+	// discoverService.pingPongCacheLock <- true
 	// Ping case
 	if msg.(map[string]interface{})["type"] == "1" {
 		pingErr := discoverService.ReceivePing(data)
 		if pingErr != nil {
+			// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " do release")
+			// <-discoverService.pingPongCacheLock
+			// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " release")
 			return nil, pingErr
 		}
 
@@ -30,6 +36,9 @@ func (discoverService *DiscoverService) ReceiveMsg(data interface{}) (interface{
 	if msg.(map[string]interface{})["type"] == "2" {
 		pongErr := discoverService.ReceivePong(data)
 		if pongErr != nil {
+			// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " do release")
+			// <-discoverService.pingPongCacheLock
+			// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " release")
 			return nil, pongErr
 		}
 	}
@@ -37,8 +46,11 @@ func (discoverService *DiscoverService) ReceiveMsg(data interface{}) (interface{
 	cache, existCache := discoverService.pingPongCache[nodeID]
 	if existCache == false {
 		// 无缘无故收到Pong就会这样。不用管他
-		// logger.Debug("senderNodeID: " + nodeID + "\nmyNodeID :" + config.ParseNodeID(discoverService.conf))
 		// logger.Debug(config.ParseNodeID(discoverService.conf) + " receive : " + msg.(map[string]interface{})["type"].(string) + " from: " + nodeID)
+		// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " receive : " + msg.(map[string]interface{})["type"].(string))
+		// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " do release")
+		// <-discoverService.pingPongCacheLock
+		// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " release")
 		return nil, error.New(map[string]interface{}{
 			"message": "非法数据包：收到数据包，但是没有给这个节点做缓存。",
 		})
@@ -47,6 +59,9 @@ func (discoverService *DiscoverService) ReceiveMsg(data interface{}) (interface{
 	// 完成握手，加入Bucket
 	if (cache.GetDoingPing() == false || cache.GetDoingPing() == true) && cache.GetPing() == true && cache.GetPong() == true {
 		delete(discoverService.pingPongCache, nodeID)
+		// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " do release")
+		// <-discoverService.pingPongCacheLock
+		// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " release")
 		newNode, newNodeError := commonModels.CreateNode(map[string]interface{}{
 			"ip":          sourceIP,
 			"servicePort": sourceServicePort,
@@ -71,6 +86,9 @@ func (discoverService *DiscoverService) ReceiveMsg(data interface{}) (interface{
 	if cache.GetDoingPing() == false && cache.GetPing() == true && cache.GetPong() == false {
 		// logger.Debug("retu")
 		// discoverService.DoPong(sourceIP, sourceServicePort, nodeID)
+		// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " do release")
+		// <-discoverService.pingPongCacheLock
+		// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " release")
 		discoverService.DoPing(sourceIP, sourceServicePort, nodeID)
 		return nil, nil
 	}
@@ -79,6 +97,9 @@ func (discoverService *DiscoverService) ReceiveMsg(data interface{}) (interface{
 	if cache.GetDoingPing() == true && cache.GetPing() == true && cache.GetPong() == false {
 		// discoverService.DoPong(sourceIP, sourceServicePort, nodeID)
 		// discoverService.DoPing(sourceIP, sourceServicePort, nodeID)
+		// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " do release")
+		// <-discoverService.pingPongCacheLock
+		// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " release")
 		return nil, nil
 	}
 
@@ -86,6 +107,9 @@ func (discoverService *DiscoverService) ReceiveMsg(data interface{}) (interface{
 	// 无视即可
 	if cache.GetDoingPing() == false && cache.GetPing() == false && cache.GetPong() == true {
 		// logger.Debug("2")
+		// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " do release")
+		// <-discoverService.pingPongCacheLock
+		// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " release")
 		return nil, nil
 	}
 
@@ -93,9 +117,13 @@ func (discoverService *DiscoverService) ReceiveMsg(data interface{}) (interface{
 	// 这时候不需要干啥，干等获得对方的Ping即可
 	if cache.GetDoingPing() == true && cache.GetPing() == false && cache.GetPong() == true {
 		// logger.Debug("ret3")
+		// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " do release")
+		// <-discoverService.pingPongCacheLock
+		// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " release")
 		return nil, nil
 	}
 
+	// <-discoverService.pingPongCacheLock
 	return nil, nil
 }
 

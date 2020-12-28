@@ -45,11 +45,13 @@ func (discoverService *DiscoverService) DoSend(message string, targetIP string, 
 		logger.Error("发送的UDP报文超长")
 		return nil
 	}
+	// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " todo sent discover")
 	discoverService.myPublicChanel["sendDiscoverMsgChanel"] <- map[string]interface{}{
 		"message":           message,
 		"targetIP":          targetIP,
 		"targetServicePort": targetServicePort,
 	}
+	// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " done sent discover")
 
 	return nil
 }
@@ -81,6 +83,7 @@ func (discoverService *DiscoverService) Send(message string, targetIP string, ta
 		return nil
 	}
 
+	// 如果不是给自己发送包，就走socket发送数据
 	ipPort := targetIP + ":" + targetServicePort
 
 	targetAddress, resolveErr := net.ResolveUDPAddr("udp", ipPort)
@@ -125,7 +128,7 @@ func (discoverService *DiscoverService) BuildPackageBody(packType string, nodeID
 	msgHash := sign.Hash(msg)
 
 	// 之后还要签名
-	signature, signErr := sign.Sign(msgHash, confNet.(map[string]interface{})["localPrivateKey"].(string))
+	signature, signErr := sign.Sign(msgHash, confNet.(map[string]interface{})["localPrivateKey"].(string), confNet.(map[string]interface{})["publicKey"].(string))
 	if signErr != nil {
 		return "", error.New(map[string]interface{}{
 			"message": "系统错误。shaker.go DoPong signErr",

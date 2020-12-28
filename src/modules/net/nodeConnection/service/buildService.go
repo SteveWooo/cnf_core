@@ -59,10 +59,10 @@ func (ncService *NodeConnectionService) Build(conf interface{}, myPublicChanel m
 	ncService.outBoundConn = make([]*nodeConnectionModels.NodeConn, OUTBOUND_CONN_MAX)
 
 	// 创建统一socket
-	ncService.limitTCPInboundConn = make(chan bool, 1024)
-	ncService.limitTCPOutboundConn = make(chan bool, 1024)
-	ncService.masterOutBoundSocket = make([]*nodeConnectionModels.NodeConn, 1024)
-	ncService.masterInBoundSocket = make([]*nodeConnectionModels.NodeConn, 1024)
+	ncService.limitTCPInboundConn = make(chan bool, 10240)
+	ncService.limitTCPOutboundConn = make(chan bool, 10240)
+	ncService.masterOutBoundSocket = make([]*nodeConnectionModels.NodeConn, 10240)
+	ncService.masterInBoundSocket = make([]*nodeConnectionModels.NodeConn, 10240)
 
 	// 设置tcp消息读取协程上限(目前没用上，做成高性能tcp服务器需要用到，参考UDP服务部分实现)
 	ncService.limitProcessTCPData = make(chan bool, 5)

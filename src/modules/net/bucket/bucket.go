@@ -35,27 +35,38 @@ func (bucket *Bucket) ReceiveBucketOperateMsg(bucketOperate map[string]interface
 func (bucket *Bucket) HandleBucketSeed(chanel chan map[string]interface{}) {
 	for {
 		seed := bucket.GetSeed()
-		// 没有种子，就消停会，再从配置里面获取新的种子
+		// 没有种子，就从配置里面获取新的种子
 		if seed == nil {
-			timer.Sleep(10000)
+			timer.Sleep(500)
 			bucket.CollectSeedFromConf()
 			continue
 		}
 
+		// 检查桶里是否已经有这个Node了，有的话就不推了
+		if bucket.IsNodeExist(seed) == true {
+			// logger.Debug(bucket.conf.(map[string]interface{})["number"].(string) + " newNode is exists")
+			continue
+		}
+		// logger.Debug(bucket.conf.(map[string]interface{})["number"].(string) + " newNode not exists")
+
+		// fmt.Println(bucket.conf.(map[string]interface{})["number"].(string)+" bucket chanel Addr: ", &chanel)
+		// logger.Debug(bucket.conf.(map[string]interface{})["number"].(string) + " todo set seed")
+
 		chanel <- map[string]interface{}{
 			"node": seed,
 		}
+		// logger.Debug(bucket.conf.(map[string]interface{})["number"].(string) + " done set seed")
 	}
 }
 
 // HandleBucketNode 输出可用Node 主要对外输出可用Node，给节点连接服务为主
 func (bucket *Bucket) HandleBucketNode(chanel chan map[string]interface{}) {
 	for {
+		timer.Sleep(2000)
 		node := bucket.GetRandomNode()
 		if node == nil {
 			continue
 		}
-
 		chanel <- map[string]interface{}{
 			"node": node,
 		}

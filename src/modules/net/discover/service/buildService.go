@@ -14,7 +14,8 @@ type DiscoverService struct {
 	socketConn *net.UDPConn
 
 	// 处理握手缓存
-	pingPongCache map[string]*discoverModel.PingPongCachePackage
+	pingPongCacheLock chan bool
+	pingPongCache     map[string]*discoverModel.PingPongCachePackage
 
 	// 缓存最大数量
 	maxPingPong int
@@ -37,10 +38,11 @@ func (discoverService *DiscoverService) Build(conf interface{}, myPublicChanel m
 
 	// 初始化缓存变量
 	discoverService.pingPongCache = make(map[string]*discoverModel.PingPongCachePackage)
+	discoverService.pingPongCacheLock = make(chan bool, 1)
 	discoverService.maxPingPong = 1024
 
 	// 并发监听socket量
-	discoverService.limitProcessUDPData = make(chan bool, 5)
+	discoverService.limitProcessUDPData = make(chan bool, 100)
 
 	confNet := discoverService.conf.(map[string]interface{})["net"]
 	// ⭐JSON读取配置文件的数字时，默认会读取为float64，所以要先抓换成uint64，再换成字符串。

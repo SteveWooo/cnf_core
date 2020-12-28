@@ -24,6 +24,7 @@ func (ncService *NodeConnectionService) RunService(chanels map[string]chan map[s
 	}
 
 	tcpListener, listenErr := net.Listen("tcp", ncService.socketAddr)
+	// logger.Debug("listen: " + ncService.socketAddr)
 	if listenErr != nil {
 		return error.New(map[string]interface{}{
 			"message":   "监听UDP端口失败",
@@ -77,7 +78,24 @@ func (ncService *NodeConnectionService) SalveHandleNodeInBoundConnectionCreateEv
 func (ncService *NodeConnectionService) ProcessInboundTCPData(nodeConn *nodeConnectionModels.NodeConn) {
 	chanel := ncService.myPrivateChanel["receiveNodeConnectionMsgChanel"]
 	for {
-		tcpSourceDataByte := make([]byte, 1024)
+		tcpSourceDataByte := make([]byte, 2048)
+
+		// 断包粘包处理方式（目前出现得不多，先不管了）
+		// length := 0
+		// for {
+		// 	var readErr interface{}
+		// 	length, readErr = (*nodeConn.Socket).Read(tcpSourceDataByte)
+		// 	if readErr != nil {
+		// 		// TODO 连接失败要全部子节点都断掉
+
+		// 		// 释放一个inBound限制
+		// 		<-ncService.limitTCPInboundConn
+		// 		// logger.Debug(config.ParseNodeID(ncService.conf) + " inBound relive")
+		// 		// logger.Debug(readErr)
+		// 		return
+		// 	}
+		// 	if length == tcpSourceDataByte
+		// }
 
 		length, readErr := (*nodeConn.Socket).Read(tcpSourceDataByte)
 		if readErr != nil {
@@ -94,6 +112,7 @@ func (ncService *NodeConnectionService) ProcessInboundTCPData(nodeConn *nodeConn
 
 		tcpData, parseErr := ncService.ParseTCPData(tcpSourceData)
 		if parseErr != nil {
+			logger.Error(tcpSourceData)
 			logger.Error(parseErr.GetMessage())
 			continue
 		}
@@ -115,7 +134,7 @@ func (ncService *NodeConnectionService) ParseTCPData(tcpSourceData string) (inte
 	contentByte, decodeErr := base64.StdEncoding.DecodeString(contentBase64)
 	if decodeErr != nil {
 		return nil, error.New(map[string]interface{}{
-			"message": "tcp数据包解析失败",
+			"message": "tcp数据包解析失败: enCodeBase64",
 		})
 	}
 	content := string(contentByte)
@@ -123,7 +142,7 @@ func (ncService *NodeConnectionService) ParseTCPData(tcpSourceData string) (inte
 	jSONDecodeErr := json.Unmarshal([]byte(content), &contentJSON)
 	if jSONDecodeErr != nil {
 		return nil, error.New(map[string]interface{}{
-			"message": "tcp数据包解析失败",
+			"message": "tcp数据包解析失败:content json unMarshal",
 		})
 	}
 
@@ -133,7 +152,7 @@ func (ncService *NodeConnectionService) ParseTCPData(tcpSourceData string) (inte
 	msgJSONDecodeErr := json.Unmarshal([]byte(contentJSONMsg), &msgJSON)
 	if msgJSONDecodeErr != nil {
 		return nil, error.New(map[string]interface{}{
-			"message": "tcp数据包解析失败",
+			"message": "tcp数据包解析失败:message content json umMarshal",
 		})
 	}
 

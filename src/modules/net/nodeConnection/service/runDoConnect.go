@@ -21,7 +21,8 @@ func (ncService *NodeConnectionService) RunFindConnection(chanels map[string]cha
 // DoFindConnection 主动找可用节点
 func (ncService *NodeConnectionService) DoFindConnection(chanels map[string]chan map[string]interface{}) {
 	for {
-		timer.Sleep(500 + rand.Intn(500))
+		timer.Sleep(1000 + rand.Intn(1000))
+		// continue
 		// timer.Sleep(1000)
 		// 如果outbound无空位，则不需要进行尝试连接
 		if ncService.IsOutBoundFull() == true {
@@ -43,12 +44,6 @@ func (ncService *NodeConnectionService) DoFindConnection(chanels map[string]chan
 		if ncService.IsBucketExistUnShakedNode(newNode.GetNodeID()) || ncService.IsBucketExistShakedNode(newNode.GetNodeID()) {
 			continue
 		}
-
-		// 不需要建立相同的tcp连接。
-		// logger.Debug(config.ParseNodeID(ncService.conf) + " trying : " + newNode.GetIP() + ":" + newNode.GetServicePort())
-		// if ncService.CheckBoundAddress(newNode.GetIP(), newNode.GetServicePort()) == true {
-		// 	continue
-		// }
 
 		// 端口多路复用逻辑 Master节点会调用以下函数 MasterDoTryOutBoundConnect
 		ncService.myPublicChanel["submitNodeConnectionCreateChanel"] <- map[string]interface{}{
@@ -72,7 +67,7 @@ func (ncService *NodeConnectionService) MasterDoTryOutBoundConnect(newNode *comm
 	// 如果是本地连本地，那就返回一个空socket的nodeConn回去即可
 	cnfNet := ncService.conf.(map[string]interface{})["net"]
 	if newNode.GetIP() == cnfNet.(map[string]interface{})["ip"] && newNode.GetServicePort() == cnfNet.(map[string]interface{})["servicePort"] {
-		// logger.Debug("本地连接创立！")
+		// logger.Debug("本地连接创立！to: " + newNode.GetIP() + ":" + newNode.GetServicePort())
 		var nodeConn nodeConnectionModels.NodeConn
 		nodeConn.Build(nil, "outBound")
 		nodeConn.SetRemoteAddr(newNode.GetIP() + ":" + newNode.GetServicePort())
@@ -176,7 +171,7 @@ func (ncService *NodeConnectionService) SalveHandleNodeOutBoundConnectionCreateE
 	addConnErr := ncService.AddOutBoundConn(nodeConn)
 
 	if addConnErr != nil {
-		logger.Error("子节点中，添加节点到outbound失败")
+		// logger.Error("子节点中，添加节点到outbound失败")
 		return
 	}
 

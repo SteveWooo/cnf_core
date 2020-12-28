@@ -44,7 +44,7 @@ func (cnfNet *CnfNet) HandleDiscoverMsgReceive(chanels map[string]chan map[strin
 			if exist {
 				chanel.(map[string]chan map[string]interface{})["receiveDiscoverMsgChanel"] <- udpData
 			} else {
-				logger.Error("接收到未知Udp数据包，本服务器无该节点 - 1:" + udpData["targetNodeID"].(string))
+				// logger.Error("接收到未知Udp数据包，本服务器无该节点 - 1:" + udpData["targetNodeID"].(string))
 			}
 		}
 	}

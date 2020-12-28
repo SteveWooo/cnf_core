@@ -16,6 +16,5 @@
 
 bin/*.exe
 
-config/test100/*
-config/test1000/*
-config/test1000Local/*
+config/test*/*
+config/test*.json
