@@ -27,7 +27,7 @@ func main() {
 		return
 	}
 
-	COUNT := 20000
+	COUNT := 10000
 	// 同一个端口，才用同一套公共频道
 	publicChanels := make(map[string]interface{})
 

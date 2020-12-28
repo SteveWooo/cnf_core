@@ -54,6 +54,7 @@ func (cnfNet *CnfNet) DoLogHTTP() {
 
 // DoLogUDP UDP的方式发日志
 func (cnfNet *CnfNet) DoLogUDP() {
+	return
 	for {
 		timer.Sleep(10000 + rand.Intn(20000))
 		udpAddr, _ := net.ResolveUDPAddr("udp4", "127.0.0.1:8081")
