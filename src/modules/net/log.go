@@ -77,3 +77,17 @@ func (cnfNet *CnfNet) DoLogUDP() {
 		udpConn.Close()
 	}
 }
+
+// DoLogChanel 通过进程内通道发送日志到主线程上，由主线程把日志发到日志中心去
+func (cnfNet *CnfNet) DoLogChanel() {
+	for {
+		timer.Sleep(2000 + rand.Intn(2000))
+
+		netStatus := cnfNet.GetLog()
+		logBody := make(map[string]interface{})
+		logBody["nodeID"] = config.ParseNodeID(cnfNet.conf)
+		logBody["netStatus"] = netStatus
+		logBody["number"] = cnfNet.conf.(map[string]interface{})["number"]
+		cnfNet.myPublicChanel["logChanel"] <- logBody
+	}
+}

@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"io/ioutil"
 	_ "net/http/pprof"
 
 	"log"
@@ -10,6 +13,7 @@ import (
 	config "github.com/cnf_core/src/utils/config"
 	error "github.com/cnf_core/src/utils/error"
 	"github.com/cnf_core/src/utils/logger"
+	"github.com/cnf_core/src/utils/timer"
 )
 
 func main() {
@@ -75,10 +79,54 @@ func main() {
 		go (*cnfObj[i]).DoRunDiscover()
 	}
 
+	go HandleChanelLog(publicChanels)
+
 	// 挂起主协程
 	c := make(chan bool)
 	d := <-c
 	if d {
 		return
+	}
+}
+
+// HandleChanelLog 管理子节点的所有日志
+func HandleChanelLog(publicChanels map[string]interface{}) {
+	logDataLock := make(chan bool, 1)
+	logData := make(map[string]interface{})
+	for _, publicChanel := range publicChanels {
+		publicChanelMap := publicChanel.(map[string]interface{})
+		for nodeID, chanel := range publicChanelMap {
+			// 初始化map变量
+			logData[nodeID] = make(map[string]interface{})
+
+			readLog := func(nodeID string, chanel interface{}) {
+				for {
+					data := <-chanel.(map[string]chan map[string]interface{})["logChanel"]
+					logDataLock <- true
+					logData[nodeID] = data
+					<-logDataLock
+				}
+			}
+			go readLog(nodeID, chanel)
+		}
+	}
+
+	// 定时发送日志
+	client := &http.Client{}
+	for {
+		timer.Sleep(1000)
+		logDataLock <- true
+		httpBodyJSON, _ := json.Marshal(logData)
+		<-logDataLock
+		req, _ := http.NewRequest("POST", "http://localhost:8081/api/update_node_status", bytes.NewReader(httpBodyJSON))
+		resp, doErr := client.Do(req)
+		if doErr != nil {
+			// logger.Debug(doErr)
+			continue
+		}
+		body, _ := ioutil.ReadAll(resp.Body)
+		bodyStr := string(body)
+		if bodyStr != "" {
+		}
 	}
 }

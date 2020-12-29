@@ -62,7 +62,7 @@ func (cnf *Cnf) GetPublicChanel() (string, map[string]chan map[string]interface{
 // 一般根据publicChanel（子节点数）来决定管道数量
 func (cnf *Cnf) initPublicChanel(chanelLength int) {
 	// 初始化多路复用的公共频道
-	// chanelLength = 5000
+	/// ⭐应该只有主节点需要那么多条通道，普通节点不用那么多也行
 
 	// 关于udp数据包的
 	cnf.myPublicChanel["receiveDiscoverMsgChanel"] = make(chan map[string]interface{}, chanelLength) // 接收Udp消息，主节点把消息扔这里
@@ -75,6 +75,9 @@ func (cnf *Cnf) initPublicChanel(chanelLength int) {
 	// 这个缓存一旦变小，就会卡死
 	cnf.myPublicChanel["receiveNodeConnectionMsgChanel"] = make(chan map[string]interface{}, chanelLength) // 接收到tcp消息，主节点把消息扔这里
 	cnf.myPublicChanel["sendNodeConnectionMsgChanel"] = make(chan map[string]interface{}, chanelLength)    // 子节点发送tcp消息的
+
+	// 给主进程用的日志通道
+	cnf.myPublicChanel["logChanel"] = make(chan map[string]interface{}, 10)
 }
 
 // Run 主程序入口, 无公共Chanel的实现
@@ -85,7 +88,8 @@ func (cnf *Cnf) Run(signal chan bool) {
 
 	// 常驻，监听各个协程的状态
 	// go cnf.cnfNet.DoLogHTTP()
-	go cnf.cnfNet.DoLogUDP()
+	// go cnf.cnfNet.DoLogUDP()
+	go cnf.cnfNet.DoLogChanel()
 
 	if signal != nil {
 		signal <- true
@@ -108,7 +112,8 @@ func (cnf *Cnf) RunWithPublicChanel(nodeChanels map[string]interface{}, signal c
 
 	// 常驻，监听各个协程的状态
 	// go cnf.cnfNet.DoLogHTTP()
-	go cnf.cnfNet.DoLogUDP()
+	// go cnf.cnfNet.DoLogUDP()
+	go cnf.cnfNet.DoLogChanel()
 
 	if signal != nil {
 		signal <- true

@@ -21,7 +21,7 @@ func (ncService *NodeConnectionService) RunFindConnection(chanels map[string]cha
 // DoFindConnection 主动找可用节点
 func (ncService *NodeConnectionService) DoFindConnection(chanels map[string]chan map[string]interface{}) {
 	for {
-		timer.Sleep(1000 + rand.Intn(1000))
+		timer.Sleep(3000 + rand.Intn(3000))
 		// continue
 		// timer.Sleep(1000)
 		// 如果outbound无空位，则不需要进行尝试连接

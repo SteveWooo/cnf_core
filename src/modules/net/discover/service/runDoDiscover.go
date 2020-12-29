@@ -20,7 +20,7 @@ func (discoverService *DiscoverService) RunDoDiscover(chanels map[string]chan ma
 func (discoverService *DiscoverService) ProcessSeed(chanels map[string]chan map[string]interface{}) {
 	// 不断获取seed，然后使用shaker发起握手。
 	for {
-		timer.Sleep(1000 + rand.Intn(1000))
+		timer.Sleep(3000 + rand.Intn(3000))
 		// fmt.Println(discoverService.conf.(map[string]interface{})["number"].(string)+" (inRundiscover) bucket chanel Addr: ", chanels["bucketSeedChanel"])
 		// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " todo get seed")
 		seed := <-chanels["bucketSeedChanel"]

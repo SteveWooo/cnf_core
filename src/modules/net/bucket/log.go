@@ -7,6 +7,7 @@ func (bucket *Bucket) GetStatus() map[string]interface{} {
 	// 处理连接情况
 	var newBucket []string
 	var triedBucket []string
+	bucket.newBucketLock <- true
 	for i := 0; i < len(bucket.newBucket); i++ {
 		nodeGroup := bucket.newBucket[i]
 		for k := 0; k < len(nodeGroup); k++ {
@@ -17,7 +18,9 @@ func (bucket *Bucket) GetStatus() map[string]interface{} {
 			newBucket = append(newBucket, node.GetNodeID())
 		}
 	}
+	<-bucket.newBucketLock
 
+	bucket.triedBucketLock <- true
 	for i := 0; i < len(bucket.triedBucket); i++ {
 		nodeGroup := bucket.triedBucket[i]
 		for k := 0; k < len(nodeGroup); k++ {
@@ -28,6 +31,7 @@ func (bucket *Bucket) GetStatus() map[string]interface{} {
 			triedBucket = append(triedBucket, node.GetNodeID())
 		}
 	}
+	<-bucket.triedBucketLock
 
 	serviceStatus["newBucket"] = newBucket
 	serviceStatus["triedBucket"] = triedBucket
