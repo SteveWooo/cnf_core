@@ -88,6 +88,7 @@ func (discoverService *DiscoverService) Send(message string, targetIP string, ta
 
 	targetAddress, resolveErr := net.ResolveUDPAddr("udp", ipPort)
 	if resolveErr != nil {
+		// logger.Debug("udp连接创建失败")
 		return error.New(map[string]interface{}{
 			"message": "创建udp地址对象失败",
 		})

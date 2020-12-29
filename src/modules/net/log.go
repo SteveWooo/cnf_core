@@ -54,9 +54,9 @@ func (cnfNet *CnfNet) DoLogHTTP() {
 
 // DoLogUDP UDP的方式发日志
 func (cnfNet *CnfNet) DoLogUDP() {
-	return
+	// return
 	for {
-		timer.Sleep(10000 + rand.Intn(20000))
+		timer.Sleep(1000 + rand.Intn(2000))
 		udpAddr, _ := net.ResolveUDPAddr("udp4", "127.0.0.1:8081")
 		udpConn, udpConnErr := net.DialUDP("udp", nil, udpAddr)
 		if udpConnErr != nil {
@@ -71,7 +71,7 @@ func (cnfNet *CnfNet) DoLogUDP() {
 		logBodyJSONByte, _ := json.Marshal(logBody)
 		logBodyJSON := string(logBodyJSONByte)
 		logBodyJSON = logBodyJSON + "\r\n"
-
+		// logger.Debug("sent")
 		udpConn.Write([]byte(logBodyJSON))
 
 		udpConn.Close()

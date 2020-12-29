@@ -7,6 +7,7 @@ import (
 	filepath "path/filepath"
 
 	error "github.com/cnf_core/src/utils/error"
+	"github.com/cnf_core/src/utils/logger"
 )
 
 var config interface{}
@@ -14,12 +15,12 @@ var config interface{}
 // 载入全局配置
 func loadConfig(configFilePath string) (interface{}, interface{}) {
 	// configFilePath := GetArg("configure")
-	// if configFilePath == "" {
-	// 	// logger.Error("missing console argv: configure")
-	// 	return nil, error.New(map[string]interface{}{
-	// 		"message": "缺乏控制台参数：configure",
-	// 	})
-	// }
+	if configFilePath == "" {
+		// logger.Error("missing console argv: configure")
+		return nil, error.New(map[string]interface{}{
+			"message": "缺乏控制台参数：configure",
+		})
+	}
 
 	// 判断输入参数是绝对路径还是相对路径, 相对路径的起点是可执行文件的当前目录
 	if filepath.IsAbs(configFilePath) {
@@ -37,8 +38,10 @@ func loadConfig(configFilePath string) (interface{}, interface{}) {
 		executableDir := filepath.Dir(executablePath)
 
 		// 获得当前目录下, 取得规整化配置文件路径
-		configFilePath = filepath.Clean(executableDir) + filepath.Clean("\\") + filepath.Clean(configFilePath)
+		configFilePath = filepath.Clean(executableDir) + filepath.Clean("/") + filepath.Clean(configFilePath)
 	}
+
+	logger.Debug(configFilePath)
 
 	// 然后利用配置文件路径, 读取配置文件出来
 	configFile, _ := ioutil.ReadFile(configFilePath)

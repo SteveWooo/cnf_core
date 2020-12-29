@@ -30,14 +30,14 @@ func main() {
 	// 	return
 	// }
 
-	COUNT := 10
+	COUNT := 1000
 	// 同一个端口，才用同一套公共频道
 	publicChanels := make(map[string]interface{})
 
 	cnfObj := make([]*cnf.Cnf, COUNT)
 
 	// 用一个大JSON来存配置
-	configJSONArray, _ := config.LoadByPath("../config/test1WComplex.json")
+	configJSONArray, _ := config.LoadByPath("../config/test.conf.json")
 
 	for i := 0; i < COUNT; i++ {
 
