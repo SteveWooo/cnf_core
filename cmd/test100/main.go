@@ -11,7 +11,6 @@ import (
 
 	cnf "github.com/cnf_core/src"
 	config "github.com/cnf_core/src/utils/config"
-	error "github.com/cnf_core/src/utils/error"
 	"github.com/cnf_core/src/utils/logger"
 	"github.com/cnf_core/src/utils/timer"
 )
@@ -23,15 +22,15 @@ func main() {
 	}()
 
 	// 首先把配置文件, 全局对象之类的初始化好
-	_, loadConfErr := config.Load()
-	if loadConfErr != nil {
-		error.New(map[string]interface{}{
-			"message": "配置获取失败",
-		})
-		return
-	}
+	// _, loadConfErr := config.Load()
+	// if loadConfErr != nil {
+	// 	error.New(map[string]interface{}{
+	// 		"message": "配置获取失败",
+	// 	})
+	// 	return
+	// }
 
-	COUNT := 10000
+	COUNT := 10
 	// 同一个端口，才用同一套公共频道
 	publicChanels := make(map[string]interface{})
 
@@ -118,7 +117,7 @@ func HandleChanelLog(publicChanels map[string]interface{}) {
 		logDataLock <- true
 		httpBodyJSON, _ := json.Marshal(logData)
 		<-logDataLock
-		req, _ := http.NewRequest("POST", "http://localhost:8081/api/update_node_status", bytes.NewReader(httpBodyJSON))
+		req, _ := http.NewRequest("POST", "http://192.168.31.164:8081/api/update_node_status", bytes.NewReader(httpBodyJSON))
 		resp, doErr := client.Do(req)
 		if doErr != nil {
 			// logger.Debug(doErr)
