@@ -14,12 +14,12 @@ var config interface{}
 // 载入全局配置
 func loadConfig(configFilePath string) (interface{}, interface{}) {
 	// configFilePath := GetArg("configure")
-	if configFilePath == "" {
-		// logger.Error("missing console argv: configure")
-		return nil, error.New(map[string]interface{}{
-			"message": "缺乏控制台参数：configure",
-		})
-	}
+	// if configFilePath == "" {
+	// 	// logger.Error("missing console argv: configure")
+	// 	return nil, error.New(map[string]interface{}{
+	// 		"message": "缺乏控制台参数：configure",
+	// 	})
+	// }
 
 	// 判断输入参数是绝对路径还是相对路径, 相对路径的起点是可执行文件的当前目录
 	if filepath.IsAbs(configFilePath) {
