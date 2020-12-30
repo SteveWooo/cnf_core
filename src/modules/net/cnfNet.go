@@ -86,8 +86,8 @@ func (cnfNet *CnfNet) doRun() interface{} {
 	cnfNet.myPrivateChanel["receiveNodeConnectionMsgChanel"] = make(chan map[string]interface{}, 500) // 管理tcp socket中获取到消息的chanel
 	// 非master节点都能用到
 	cnfNet.myPrivateChanel["bucketOperateChanel"] = make(chan map[string]interface{}, 500) // 一般用于添加bucket节点，或seed
-	cnfNet.myPrivateChanel["bucketSeedChanel"] = make(chan map[string]interface{}, 1)      // bucket服务往这个通道输送邻居节点、种子，给doDiscover服务用
-	cnfNet.myPrivateChanel["bucketNodeChanel"] = make(chan map[string]interface{}, 1)      // bucket服务往这个通道输送可用节点，给tcp服务尝试连接。
+	cnfNet.myPrivateChanel["bucketSeedChanel"] = make(chan map[string]interface{}, 2)      // bucket服务往这个通道输送邻居节点、种子，给doDiscover服务用
+	cnfNet.myPrivateChanel["bucketNodeChanel"] = make(chan map[string]interface{}, 2)      // bucket服务往这个通道输送可用节点，给tcp服务尝试连接。
 
 	// logger.Info(config.ParseNodeID(cnfNet.conf) + "正在启动Cnf网络组件...")
 

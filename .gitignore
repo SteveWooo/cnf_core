@@ -18,3 +18,4 @@ bin/*.exe
 
 config/test*/*
 config/test*.json
+config/conf.*.json

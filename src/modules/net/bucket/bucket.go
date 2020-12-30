@@ -37,7 +37,7 @@ func (bucket *Bucket) HandleBucketSeed(chanel chan map[string]interface{}) {
 		seed := bucket.GetSeed()
 		// 没有种子，就从配置里面获取新的种子
 		if seed == nil {
-			timer.Sleep(500)
+			timer.Sleep(1000)
 			bucket.CollectSeedFromConf()
 			continue
 		}

@@ -51,7 +51,7 @@ func (ncService *NodeConnectionService) Build(conf interface{}, myPublicChanel m
 	confNet := conf.(map[string]interface{})["net"]
 
 	// 设置socket地址
-	address := confNet.(map[string]interface{})["ip"].(string) + ":" + confNet.(map[string]interface{})["servicePort"].(string)
+	address := "0.0.0.0:" + confNet.(map[string]interface{})["servicePort"].(string)
 	ncService.socketAddr = address
 
 	// 设置处理tcp连接创建的协程上限

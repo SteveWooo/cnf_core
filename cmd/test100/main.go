@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
+	"net"
 	_ "net/http/pprof"
+	"runtime"
+	"strings"
 
 	"log"
 	"net/http"
@@ -21,23 +24,15 @@ func main() {
 		log.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
 
-	// 首先把配置文件, 全局对象之类的初始化好
-	// _, loadConfErr := config.Load()
-	// if loadConfErr != nil {
-	// 	error.New(map[string]interface{}{
-	// 		"message": "配置获取失败",
-	// 	})
-	// 	return
-	// }
+	myIP := GetIP()
 
-	COUNT := 1000
+	COUNT := 10000
 	// 同一个端口，才用同一套公共频道
 	publicChanels := make(map[string]interface{})
-
 	cnfObj := make([]*cnf.Cnf, COUNT)
 
 	// 用一个大JSON来存配置
-	configJSONArray, _ := config.LoadByPath("../config/test.conf.json")
+	configJSONArray, _ := config.LoadByPath("../config/conf." + myIP + ".json")
 
 	for i := 0; i < COUNT; i++ {
 
@@ -113,7 +108,7 @@ func HandleChanelLog(publicChanels map[string]interface{}) {
 	// 定时发送日志
 	client := &http.Client{}
 	for {
-		timer.Sleep(1000)
+		timer.Sleep(5000)
 		logDataLock <- true
 		httpBodyJSON, _ := json.Marshal(logData)
 		<-logDataLock
@@ -128,4 +123,26 @@ func HandleChanelLog(publicChanels map[string]interface{}) {
 		if bodyStr != "" {
 		}
 	}
+}
+
+// GetIP 获取本地IP
+func GetIP() string {
+	interfaceName := ""
+	if runtime.GOOS == "windows" {
+		interfaceName = "WLAN"
+	}
+
+	if runtime.GOOS == "linux" {
+		interfaceName = "eth0"
+	}
+	ifi, _ := net.InterfaceByName(interfaceName)
+	addrs, _ := ifi.Addrs()
+	for _, a := range addrs {
+		ip := a.String()
+		if ip[0:7] == "192.168" {
+			return ip[0:strings.Index(ip, "/")]
+		}
+	}
+
+	return ""
 }

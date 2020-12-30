@@ -45,8 +45,8 @@ func (discoverService *DiscoverService) Build(conf interface{}, myPublicChanel m
 	discoverService.limitProcessUDPData = make(chan bool, 100)
 
 	confNet := discoverService.conf.(map[string]interface{})["net"]
-	// ⭐JSON读取配置文件的数字时，默认会读取为float64，所以要先抓换成uint64，再换成字符串。
-	address := confNet.(map[string]interface{})["ip"].(string) + ":" + confNet.(map[string]interface{})["servicePort"].(string)
+	// ⭐无论如何都要监听0.0.0.0就可以了
+	address := "0.0.0.0:" + confNet.(map[string]interface{})["servicePort"].(string)
 
 	udpAddr, resolveErr := net.ResolveUDPAddr("udp", address)
 	if resolveErr != nil {
