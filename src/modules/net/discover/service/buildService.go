@@ -41,7 +41,7 @@ func (discoverService *DiscoverService) Build(conf interface{}, myPublicChanel m
 	discoverService.pingPongCacheLock = make(chan bool, 1)
 	discoverService.maxPingPong = 1024
 
-	// 并发监听socket量
+	// 并发监听socket量（只有master需要）
 	discoverService.limitProcessUDPData = make(chan bool, 100)
 
 	confNet := discoverService.conf.(map[string]interface{})["net"]

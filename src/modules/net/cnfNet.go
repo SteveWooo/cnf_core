@@ -82,12 +82,15 @@ func (cnfNet *CnfNet) doRun() interface{} {
 	// 初始化所有管道
 	cnfNet.myPrivateChanel = make(map[string]chan map[string]interface{})
 	// 这只有Master节点才用到
-	cnfNet.myPrivateChanel["receiveDiscoverMsgChanel"] = make(chan map[string]interface{}, 500)       // 管理udp socket中获取到消息的chanel
-	cnfNet.myPrivateChanel["receiveNodeConnectionMsgChanel"] = make(chan map[string]interface{}, 500) // 管理tcp socket中获取到消息的chanel
+	cnfNet.myPrivateChanel["receiveDiscoverMsgChanel"] = make(chan map[string]interface{}, 100)       // 管理udp socket中获取到消息的chanel
+	cnfNet.myPrivateChanel["receiveNodeConnectionMsgChanel"] = make(chan map[string]interface{}, 100) // 管理tcp socket中获取到消息的chanel
 	// 非master节点都能用到
-	cnfNet.myPrivateChanel["bucketOperateChanel"] = make(chan map[string]interface{}, 500) // 一般用于添加bucket节点，或seed
-	cnfNet.myPrivateChanel["bucketSeedChanel"] = make(chan map[string]interface{}, 2)      // bucket服务往这个通道输送邻居节点、种子，给doDiscover服务用
-	cnfNet.myPrivateChanel["bucketNodeChanel"] = make(chan map[string]interface{}, 2)      // bucket服务往这个通道输送可用节点，给tcp服务尝试连接。
+	cnfNet.myPrivateChanel["bucketOperateChanel"] = make(chan map[string]interface{}, 2) // 一般用于添加bucket节点，或seed
+	cnfNet.myPrivateChanel["bucketSeedChanel"] = make(chan map[string]interface{}, 2)    // bucket服务往这个通道输送邻居节点、种子，给doDiscover服务用
+	cnfNet.myPrivateChanel["bucketNodeChanel"] = make(chan map[string]interface{}, 2)    // bucket服务往这个通道输送可用节点，给tcp服务尝试连接。
+
+	// 用于多路复用的chanel
+	cnfNet.myPrivateChanel["discoverEventChanel"] = make(chan map[string]interface{}, 10) // 发现服务的消息队列
 
 	// logger.Info(config.ParseNodeID(cnfNet.conf) + "正在启动Cnf网络组件...")
 
@@ -109,12 +112,6 @@ func (cnfNet *CnfNet) doRun() interface{} {
 
 	// 启动消息队列，其实用于各个chanel之间的消息转发
 	go cnfNet.RunMessageQueue(cnfNet.myPrivateChanel)
-
-	// // 开始主动寻找新路由节点
-	// go cnfNet.discover.RunDoDiscover(cnfNet.myPrivateChanel)
-
-	// // 开始主动尝试建立连接
-	// go cnfNet.nodeConnection.RunFindConnection(cnfNet.myPrivateChanel)
 
 	return nil
 }

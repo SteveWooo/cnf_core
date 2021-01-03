@@ -57,20 +57,9 @@ func (cnfNet *CnfNet) HandleSubNodeDiscoverMsgReceive(chanels map[string]chan ma
 		udpData := <-cnfNet.publicChanels[myNodeID].(map[string]chan map[string]interface{})["receiveDiscoverMsgChanel"]
 
 		// logger.Debug(udpData)
-
-		// 交给发现服务模块处理消息，把结果透传回来即可
-		bucketOperate, receiveErr := cnfNet.discover.ReceiveMsg(udpData)
-		if receiveErr != nil {
-			// 不处理
-			// logger.Warn(receiveErr.GetMessage())
-			continue
-		}
-
-		// 处理路由Bucket逻辑
-		if bucketOperate != nil {
-			// 由于Bucket操作有可能在tcp消息中出现，所有需要用一个chanel锁住。
-			chanels["bucketOperateChanel"] <- bucketOperate.(map[string]interface{})
-			// logger.Debug(bucketOperate.(map[string]interface{}))
+		cnfNet.myPrivateChanel["discoverEventChanel"] <- map[string]interface{}{
+			"event":   "receiveMsg",
+			"udpData": udpData,
 		}
 	}
 }

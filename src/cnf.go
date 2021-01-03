@@ -64,6 +64,8 @@ func (cnf *Cnf) initPublicChanel(chanelLength int) {
 	// 初始化多路复用的公共频道
 	/// ⭐应该只有主节点需要那么多条通道，普通节点不用那么多也行
 
+	// chanelLength = 1
+
 	// 关于udp数据包的
 	cnf.myPublicChanel["receiveDiscoverMsgChanel"] = make(chan map[string]interface{}, chanelLength) // 接收Udp消息，主节点把消息扔这里
 	cnf.myPublicChanel["sendDiscoverMsgChanel"] = make(chan map[string]interface{}, chanelLength)    // 要发送udp数据，扔这里
@@ -72,12 +74,12 @@ func (cnf *Cnf) initPublicChanel(chanelLength int) {
 	cnf.myPublicChanel["submitNodeConnectionCreateChanel"] = make(chan map[string]interface{}, chanelLength)  // 子节点需要创建TCP连接的话，子节点就往这里扔一个请求
 	cnf.myPublicChanel["receiveNodeConnectionCreateChanel"] = make(chan map[string]interface{}, chanelLength) // 主节点创建连接成功，并握手成功的，就把conn对象扔回这个chanel里面
 
-	// 这个缓存一旦变小，就会卡死
+	// 关于tcp数据包的
 	cnf.myPublicChanel["receiveNodeConnectionMsgChanel"] = make(chan map[string]interface{}, chanelLength) // 接收到tcp消息，主节点把消息扔这里
 	cnf.myPublicChanel["sendNodeConnectionMsgChanel"] = make(chan map[string]interface{}, chanelLength)    // 子节点发送tcp消息的
 
 	// 给主进程用的日志通道
-	cnf.myPublicChanel["logChanel"] = make(chan map[string]interface{}, 10)
+	cnf.myPublicChanel["logChanel"] = make(chan map[string]interface{}, 2)
 }
 
 // Run 主程序入口, 无公共Chanel的实现

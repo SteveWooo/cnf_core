@@ -25,6 +25,7 @@ func main() {
 	}()
 
 	myIP := GetIP()
+	// myIP := "192.168.10.200"
 
 	COUNT := 10000
 	// 同一个端口，才用同一套公共频道
@@ -112,7 +113,8 @@ func HandleChanelLog(publicChanels map[string]interface{}) {
 		logDataLock <- true
 		httpBodyJSON, _ := json.Marshal(logData)
 		<-logDataLock
-		req, _ := http.NewRequest("POST", "http://192.168.10.200:8081/api/update_node_status", bytes.NewReader(httpBodyJSON))
+		// req, _ := http.NewRequest("POST", "http://192.168.10.200:8081/api/update_node_status", bytes.NewReader(httpBodyJSON))
+		req, _ := http.NewRequest("POST", "http://192.168.31.136:8081/api/update_node_status", bytes.NewReader(httpBodyJSON))
 		resp, doErr := client.Do(req)
 		if doErr != nil {
 			// logger.Debug(doErr)

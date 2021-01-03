@@ -47,15 +47,10 @@ func (bucket *Bucket) HandleBucketSeed(chanel chan map[string]interface{}) {
 			// logger.Debug(bucket.conf.(map[string]interface{})["number"].(string) + " newNode is exists")
 			continue
 		}
-		// logger.Debug(bucket.conf.(map[string]interface{})["number"].(string) + " newNode not exists")
-
-		// fmt.Println(bucket.conf.(map[string]interface{})["number"].(string)+" bucket chanel Addr: ", &chanel)
-		// logger.Debug(bucket.conf.(map[string]interface{})["number"].(string) + " todo set seed")
 
 		chanel <- map[string]interface{}{
 			"node": seed,
 		}
-		// logger.Debug(bucket.conf.(map[string]interface{})["number"].(string) + " done set seed")
 	}
 }
 

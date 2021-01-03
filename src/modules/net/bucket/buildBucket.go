@@ -99,11 +99,20 @@ func (bucket *Bucket) AddSeed(node *commonModels.Node) *error.Error {
 	if exist {
 		return nil
 	}
+
+	// 再查找seed桶里是否有重复
+	bucket.seedLock <- true
+	for i := 0; i < len(bucket.seed); i++ {
+		if bucket.seed[i].GetNodeID() == node.GetNodeID() {
+			return nil
+		}
+	}
+
 	// 如果超出限制的长度，就先取一个走
 	if len(bucket.seed) >= bucket.maxSeedCount {
 		bucket.GetSeed()
 	}
-	bucket.seedLock <- true
+
 	// 把配置文件里面的种子列表加进来
 	bucket.seed = append(bucket.seed, node)
 	<-bucket.seedLock
