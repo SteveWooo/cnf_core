@@ -23,11 +23,7 @@ func (bucket *Bucket) RunService(chanels map[string]chan map[string]interface{})
 func (bucket *Bucket) ReceiveBucketOperateMsg(bucketOperate map[string]interface{}) {
 	node := bucketOperate["node"].(*commonModels.Node)
 	if bucketOperate["bucketEvent"] == "addNew" {
-		addNewErr := bucket.AddNewNode(node)
-		if addNewErr != nil {
-			// logger.Debug(addNewErr)
-			// 说明节点已经存在，不需要重复添加
-		}
+		bucket.AddNewNode(node)
 	}
 }
 

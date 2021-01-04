@@ -20,7 +20,7 @@ func (discoverService *DiscoverService) RunDoDiscover(chanels map[string]chan ma
 	// go discoverService.processDoingPingCache(chanels)
 	loop := 0
 	for {
-		timer.Sleep(2000 + rand.Intn(1000))
+		timer.Sleep(100 + rand.Intn(100))
 		discoverService.myPrivateChanel["discoverEventChanel"] <- map[string]interface{}{
 			"event": "processSeed",
 		}
@@ -62,6 +62,7 @@ func (discoverService *DiscoverService) processSeed(chanels map[string]chan map[
 	// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " get seed: " + nodeID)
 	// 设置标识为主动发起的缓存
 	newCache.SetDoingPing(seedNode.GetIP(), seedNode.GetServicePort())
+	delete(discoverService.pingPongCache, nodeID)
 	discoverService.pingPongCache[nodeID] = newCache
 
 	discoverService.DoPing(seedNode.GetIP(), seedNode.GetServicePort(), nodeID)

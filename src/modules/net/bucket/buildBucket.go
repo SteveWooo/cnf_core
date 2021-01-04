@@ -143,7 +143,7 @@ func (bucket *Bucket) AddNewNode(n *commonModels.Node) *error.Error {
 	}
 
 	bucket.newBucketLock <- true
-	myNodeID := config.GetNodeID()
+	myNodeID := config.ParseNodeID(bucket.conf)
 	bucketNum := router.CalculateDistance(myNodeID, n.GetNodeID()) // 获得bucket编号
 	// 超长的先丢掉，就算不超长，都先把第一个元素丢掉，然后再新增一个新元素进来
 	bucket.newBucket[bucketNum] = bucket.newBucket[bucketNum][1:]
@@ -201,17 +201,13 @@ func (bucket *Bucket) GetRandomNode() *commonModels.Node {
 
 	// 从缓存中获取，高性能
 	bucket.nodeCacheLock <- true
-	var node *commonModels.Node
 	if len(bucket.nodeCache) == 0 {
-		node = nil
-	} else {
-		randIndex := rand.Intn(len(bucket.nodeCache))
-		node = bucket.nodeCache[randIndex]
+		<-bucket.nodeCacheLock
+		return nil
 	}
-
+	randIndex := rand.Intn(len(bucket.nodeCache))
 	<-bucket.nodeCacheLock
-
-	return node
+	return bucket.nodeCache[randIndex]
 }
 
 // IsNodeExist 检查节点是否存在路由桶里
@@ -249,9 +245,12 @@ func (bucket *Bucket) IsNodeExist(n *commonModels.Node) bool {
 
 	// 高性能查找
 	bucket.nodeCacheLock <- true
-	nodeID := n.GetNodeID()
-	_, exists := bucket.nodeCacheHashMap[nodeID]
+	_, exists := bucket.nodeCacheHashMap[n.GetNodeID()]
 	<-bucket.nodeCacheLock
 
-	return exists
+	if exists == true {
+		return true
+	}
+
+	return false
 }

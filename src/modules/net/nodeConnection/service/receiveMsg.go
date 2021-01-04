@@ -1,6 +1,10 @@
 package services
 
 import (
+	"encoding/base64"
+	"encoding/json"
+	"strings"
+
 	nodeConnectionModels "github.com/cnf_core/src/modules/net/nodeConnection/models"
 	"github.com/cnf_core/src/utils/config"
 	"github.com/cnf_core/src/utils/error"
@@ -8,11 +12,6 @@ import (
 
 // ReceiveMsg 处理接收nodeConnetion消息，这里主要做分流
 func (ncService *NodeConnectionService) ReceiveMsg(data interface{}) (interface{}, *error.Error) {
-	return data, nil
-}
-
-// HandleMsg 从消息队列走一圈回来，判断是否需要处理这条消息的事件
-func (ncService *NodeConnectionService) HandleMsg(data interface{}) (interface{}, *error.Error) {
 	tcpData := data.(map[string]interface{})["tcpData"]
 	// logger.Debug(tcpData)
 
@@ -26,8 +25,6 @@ func (ncService *NodeConnectionService) HandleMsg(data interface{}) (interface{}
 		// logger.Debug("getDestroy")
 		return ncService.HandleShakeDestroyEvent(data)
 	}
-
-	// 先检查这个conn是否已经shake过
 
 	return nil, nil
 }
@@ -278,4 +275,41 @@ func (ncService *NodeConnectionService) HandleShakeDestroyEvent(data interface{}
 	}
 
 	return nil, nil
+}
+
+// ParseTCPData 解析TCP数据包
+func (ncService *NodeConnectionService) ParseTCPData(tcpSourceData string) (interface{}, *error.Error) {
+	// 取出content部分直接处理
+	tcpSourceData = tcpSourceData[strings.Index(tcpSourceData, "content:")+len("content:"):]
+	contentBase64 := tcpSourceData[:]
+
+	contentByte, decodeErr := base64.StdEncoding.DecodeString(contentBase64)
+	if decodeErr != nil {
+		return nil, error.New(map[string]interface{}{
+			"message": "tcp数据包解析失败: enCodeBase64",
+		})
+	}
+	content := string(contentByte)
+	var contentJSON interface{}
+	jSONDecodeErr := json.Unmarshal([]byte(content), &contentJSON)
+	if jSONDecodeErr != nil {
+		return nil, error.New(map[string]interface{}{
+			"message": "tcp数据包解析失败:content json unMarshal",
+		})
+	}
+
+	var msgJSON interface{}
+	// logger.Debug(contentJSON)
+	contentJSONMsg := contentJSON.(map[string]interface{})["msg"].(string)
+	msgJSONDecodeErr := json.Unmarshal([]byte(contentJSONMsg), &msgJSON)
+	if msgJSONDecodeErr != nil {
+		return nil, error.New(map[string]interface{}{
+			"message": "tcp数据包解析失败:message content json umMarshal",
+		})
+	}
+
+	contentJSON.(map[string]interface{})["msgJSON"] = msgJSON
+	contentJSON.(map[string]interface{})["nodeID"] = msgJSON.(map[string]interface{})["from"].(map[string]interface{})["nodeID"]
+
+	return contentJSON, nil
 }

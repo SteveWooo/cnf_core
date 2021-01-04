@@ -110,6 +110,5 @@ func (discoverService *DiscoverService) HandleDiscoverEventChanel() {
 		if eventData["event"] == "processDoingPingCache" {
 			discoverService.processDoingPingCache(discoverService.myPrivateChanel)
 		}
-
 	}
 }

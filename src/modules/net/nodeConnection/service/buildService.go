@@ -9,7 +9,7 @@ import (
 )
 
 var INBOUND_CONN_MAX int = 117
-var OUTBOUND_CONN_MAX int = 8
+var OUTBOUND_CONN_MAX int = 20
 
 // NodeConnectionService 节点连接服务的tcp handle
 type NodeConnectionService struct {

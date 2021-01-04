@@ -15,49 +15,49 @@ import (
 
 // RunFindConnection 主动找可用节点
 func (ncService *NodeConnectionService) RunFindConnection(chanels map[string]chan map[string]interface{}) {
-	go ncService.DoFindConnection(chanels)
+	for {
+		timer.Sleep(1000 + rand.Intn(1000))
+		ncService.myPrivateChanel["nodeConnectionEventChanel"] <- map[string]interface{}{
+			"event": "doFindConnection",
+		}
+	}
 }
 
 // DoFindConnection 主动找可用节点
 func (ncService *NodeConnectionService) DoFindConnection(chanels map[string]chan map[string]interface{}) {
-	for {
-		timer.Sleep(3000 + rand.Intn(3000))
-		// continue
-		// timer.Sleep(1000)
-		// 如果outbound无空位，则不需要进行尝试连接
-		if ncService.IsOutBoundFull() == true {
-			continue
-		}
-
-		nodeChanelMsg := <-chanels["bucketNodeChanel"]
-		newNode := nodeChanelMsg["node"].(*commonModels.Node)
-		// logger.Debug(config.ParseNodeID(ncService.conf) + " bucket : ")
-		// logger.Debug(ncService.inBoundConn)
-		// logger.Debug(ncService.outBoundConn)
-
-		// 不要和自己连接
-		if newNode.GetNodeID() == config.ParseNodeID(ncService.conf) {
-			continue
-		}
-
-		// 已经握手成功的节点，不需要重复建立连接
-		if ncService.IsBucketExistUnShakedNode(newNode.GetNodeID()) || ncService.IsBucketExistShakedNode(newNode.GetNodeID()) {
-			continue
-		}
-
-		// 端口多路复用逻辑 Master节点会调用以下函数 MasterDoTryOutBoundConnect
-		ncService.myPublicChanel["submitNodeConnectionCreateChanel"] <- map[string]interface{}{
-			"newNode":         newNode, // 包含了ip:port:nodeID
-			"targetNodeID":    config.ParseNodeID(ncService.conf),
-			"shakePackString": ncService.GetShakePackString("outBound", newNode.GetNodeID()),
-		}
-
-		// 非端口多路复用逻辑：
-		// tryOubountConnErr := ncService.DoTryOutBoundConnect(newNode)
-		// if tryOubountConnErr != nil {
-		// 	logger.Warn(tryOubountConnErr)
-		// }
+	// 如果outbound无空位，则不需要进行尝试连接
+	if ncService.IsOutBoundFull() == true {
+		return
 	}
+
+	nodeChanelMsg := <-chanels["bucketNodeChanel"]
+	newNode := nodeChanelMsg["node"].(*commonModels.Node)
+	// logger.Debug(config.ParseNodeID(ncService.conf) + " bucket : ")
+	// logger.Debug(ncService.inBoundConn)
+	// logger.Debug(ncService.outBoundConn)
+
+	// 不要和自己连接
+	if newNode.GetNodeID() == config.ParseNodeID(ncService.conf) {
+		return
+	}
+
+	// 已经握手成功的节点，不需要重复建立连接
+	if ncService.IsBucketExistUnShakedNode(newNode.GetNodeID()) || ncService.IsBucketExistShakedNode(newNode.GetNodeID()) {
+		return
+	}
+
+	// 端口多路复用逻辑 Master节点会调用以下函数 MasterDoTryOutBoundConnect
+	ncService.myPublicChanel["submitNodeConnectionCreateChanel"] <- map[string]interface{}{
+		"newNode":         newNode, // 包含了ip:port:nodeID
+		"targetNodeID":    config.ParseNodeID(ncService.conf),
+		"shakePackString": ncService.GetShakePackString("outBound", newNode.GetNodeID()),
+	}
+
+	// 非端口多路复用逻辑：
+	// tryOubountConnErr := ncService.DoTryOutBoundConnect(newNode)
+	// if tryOubountConnErr != nil {
+	// 	logger.Warn(tryOubountConnErr)
+	// }
 }
 
 // MasterDoTryOutBoundConnect master节点尝试建立连接，并创建一个NodeConn返回（端口多路复用函数

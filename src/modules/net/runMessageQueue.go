@@ -191,12 +191,15 @@ func (cnfNet *CnfNet) HandleSubNodeConnectionMsgReceive(chanels map[string]chan 
 	myNodeID := config.ParseNodeID(cnfNet.conf)
 	for {
 		connectionMsg := <-cnfNet.publicChanels[myNodeID].(map[string]chan map[string]interface{})["receiveNodeConnectionMsgChanel"]
-		// 交给发现服务模块处理消息，把结果透传回来即可
-		connectionMsgData, nodeConnReceiveErr := cnfNet.nodeConnection.ReceiveMsg(connectionMsg)
-		if nodeConnReceiveErr != nil {
-			continue
-		}
+		// 交给发现服务模块处理消息
+		// nodeConnReceiveErr := cnfNet.nodeConnection.ReceiveMsg(connectionMsg)
+		// if nodeConnReceiveErr != nil {
+		// 	logger.Warn(nodeConnReceiveErr)
+		// }
 
-		cnfNet.nodeConnection.HandleMsg(connectionMsgData)
+		cnfNet.myPrivateChanel["nodeConnectionEventChanel"] <- map[string]interface{}{
+			"event":   "receiveMsg",
+			"tcpData": connectionMsg,
+		}
 	}
 }

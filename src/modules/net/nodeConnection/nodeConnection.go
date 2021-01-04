@@ -42,11 +42,6 @@ func (nc *NodeConnection) ReceiveMsg(data interface{}) (interface{}, *error.Erro
 	return nc.service.ReceiveMsg(data)
 }
 
-// HandleMsg 接收消息入口 2 上面的接收消息结束后，再来判断是否要处理这条消息
-func (nc *NodeConnection) HandleMsg(data interface{}) (interface{}, *error.Error) {
-	return nc.service.HandleMsg(data)
-}
-
 // MasterDoTryOutBoundConnect 反射service函数
 func (nc *NodeConnection) MasterDoTryOutBoundConnect(data interface{}) (interface{}, *error.Error) {
 	newNode := data.(map[string]interface{})["newNode"].(*commonModels.Node)

@@ -1,10 +1,7 @@
 package services
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"net"
-	"strings"
 
 	"github.com/cnf_core/src/utils/error"
 	"github.com/cnf_core/src/utils/logger"
@@ -15,6 +12,7 @@ import (
 // RunService 启动节点通信的TCP相关服务
 func (ncService *NodeConnectionService) RunService(chanels map[string]chan map[string]interface{}, signal chan bool) *error.Error {
 	ncService.myPrivateChanel = chanels
+	go ncService.HandleNodeConnectionEventChanel()
 	// 非主节点，不需要监听socket
 	confNet := ncService.conf.(map[string]interface{})["net"]
 	if confNet.(map[string]interface{})["masterServer"] != "true" {
@@ -125,39 +123,23 @@ func (ncService *NodeConnectionService) ProcessInboundTCPData(nodeConn *nodeConn
 	}
 }
 
-// ParseTCPData 解析TCP数据包
-func (ncService *NodeConnectionService) ParseTCPData(tcpSourceData string) (interface{}, *error.Error) {
-	// 取出content部分直接处理
-	tcpSourceData = tcpSourceData[strings.Index(tcpSourceData, "content:")+len("content:"):]
-	contentBase64 := tcpSourceData[:]
+// HandleNodeConnectionEventChanel 处理发现服务的所有事件
+func (ncService *NodeConnectionService) HandleNodeConnectionEventChanel() {
+	for {
+		eventData := <-ncService.myPrivateChanel["nodeConnectionEventChanel"]
 
-	contentByte, decodeErr := base64.StdEncoding.DecodeString(contentBase64)
-	if decodeErr != nil {
-		return nil, error.New(map[string]interface{}{
-			"message": "tcp数据包解析失败: enCodeBase64",
-		})
+		if eventData["event"] == "receiveMsg" {
+			// 交给发现服务模块处理消息，把结果透传回来即可
+			_, nodeConnReceiveErr := ncService.ReceiveMsg(eventData["tcpData"])
+			if nodeConnReceiveErr != nil {
+				logger.Warn(nodeConnReceiveErr)
+			}
+			continue
+		}
+
+		if eventData["event"] == "doFindConnection" {
+			ncService.DoFindConnection(ncService.myPrivateChanel)
+			continue
+		}
 	}
-	content := string(contentByte)
-	var contentJSON interface{}
-	jSONDecodeErr := json.Unmarshal([]byte(content), &contentJSON)
-	if jSONDecodeErr != nil {
-		return nil, error.New(map[string]interface{}{
-			"message": "tcp数据包解析失败:content json unMarshal",
-		})
-	}
-
-	var msgJSON interface{}
-	// logger.Debug(contentJSON)
-	contentJSONMsg := contentJSON.(map[string]interface{})["msg"].(string)
-	msgJSONDecodeErr := json.Unmarshal([]byte(contentJSONMsg), &msgJSON)
-	if msgJSONDecodeErr != nil {
-		return nil, error.New(map[string]interface{}{
-			"message": "tcp数据包解析失败:message content json umMarshal",
-		})
-	}
-
-	contentJSON.(map[string]interface{})["msgJSON"] = msgJSON
-	contentJSON.(map[string]interface{})["nodeID"] = msgJSON.(map[string]interface{})["from"].(map[string]interface{})["nodeID"]
-
-	return contentJSON, nil
 }
