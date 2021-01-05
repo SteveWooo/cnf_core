@@ -35,20 +35,28 @@ type Bucket struct {
 	seedLock     chan bool
 	seed         []*commonModels.Node
 	maxSeedCount int
+
+	// 临时变量
+	bucketTempSeed        *commonModels.Node
+	bucketTempNodeList    []*commonModels.Node
+	bucketTempIsNodeExist bool
+
+	// 自己的内部频道
+	myPrivateChanel map[string]chan map[string]interface{}
 }
 
 // Build 初始化路由桶
 func (bucket *Bucket) Build(conf interface{}) {
 	bucket.conf = conf
-	bucket.newBucket = make(map[int][]*commonModels.Node) // 初始化数组对象本身
-	for i := 0; i <= NEW_BUCKET_COUNT; i++ {
-		bucket.newBucket[i] = make([]*commonModels.Node, NEW_BUCKET_LENGTH+1) // 声明第一个维度每个对象都是一个子数组
-	}
+	// bucket.newBucket = make(map[int][]*commonModels.Node) // 初始化数组对象本身
+	// for i := 0; i <= NEW_BUCKET_COUNT; i++ {
+	// 	bucket.newBucket[i] = make([]*commonModels.Node, NEW_BUCKET_LENGTH+1) // 声明第一个维度每个对象都是一个子数组
+	// }
 
-	bucket.triedBucket = make(map[int][]*commonModels.Node) // 初始化数组对象本身
-	for i := 0; i <= TRIED_BUCKET_COUNT; i++ {
-		bucket.triedBucket[i] = make([]*commonModels.Node, TRIED_BUCKET_LENGTH+1) // 声明第一个维度每个对象都是一个子数组
-	}
+	// bucket.triedBucket = make(map[int][]*commonModels.Node) // 初始化数组对象本身
+	// for i := 0; i <= TRIED_BUCKET_COUNT; i++ {
+	// 	bucket.triedBucket[i] = make([]*commonModels.Node, TRIED_BUCKET_LENGTH+1) // 声明第一个维度每个对象都是一个子数组
+	// }
 
 	// 缓存最新加进来的节点，随机就找他们了
 	bucket.nodeCache = make([]*commonModels.Node, 0)
@@ -69,7 +77,7 @@ func (bucket *Bucket) Build(conf interface{}) {
 	}
 	bucket.maxSeedCount = maxSeedCount
 
-	bucket.CollectSeedFromConf()
+	// bucket.CollectSeedFromConf()
 }
 
 //CollectSeedFromConf 从配置中获取种子
@@ -142,28 +150,95 @@ func (bucket *Bucket) AddNewNode(n *commonModels.Node) *error.Error {
 		})
 	}
 
-	bucket.newBucketLock <- true
-	myNodeID := config.ParseNodeID(bucket.conf)
-	bucketNum := router.CalculateDistance(myNodeID, n.GetNodeID()) // 获得bucket编号
-	// 超长的先丢掉，就算不超长，都先把第一个元素丢掉，然后再新增一个新元素进来
-	bucket.newBucket[bucketNum] = bucket.newBucket[bucketNum][1:]
-	bucket.newBucket[bucketNum] = append(bucket.newBucket[bucketNum], n)
-	<-bucket.newBucketLock
+	// bucket.newBucketLock <- true
+	// myNodeID := config.ParseNodeID(bucket.conf)
+	// bucketNum := router.CalculateDistance(myNodeID, n.GetNodeID()) // 获得bucket编号
+	// // 超长的先丢掉，就算不超长，都先把第一个元素丢掉，然后再新增一个新元素进来
+	// bucket.newBucket[bucketNum] = bucket.newBucket[bucketNum][1:]
+	// bucket.newBucket[bucketNum] = append(bucket.newBucket[bucketNum], n)
+	// <-bucket.newBucketLock
 
 	bucket.AddNodeCache(n)
 	return nil
 }
 
-// AddNodeCache 把节点放入缓存中
+// AddNodeCache 把节点放入缓存中，按照距离远近放入
 func (bucket *Bucket) AddNodeCache(n *commonModels.Node) *error.Error {
 	bucket.nodeCacheLock <- true
+	// 超长的话先删掉一个
 	if len(bucket.nodeCache) >= bucket.maxNodeCacheCount {
-		bucket.nodeCache = bucket.nodeCache[1:]
+		bucket.nodeCache = bucket.nodeCache[0 : len(bucket.nodeCache)-1]
 	}
-	bucket.nodeCache = append(bucket.nodeCache, n)
+
+	// 放入缓存就按照距离排序好
+	myNodeID := config.ParseNodeID(bucket.conf)
+	// 为空直接放入
+	if len(bucket.nodeCache) == 0 {
+		bucket.nodeCache = append(bucket.nodeCache, n)
+		bucket.nodeCacheHashMap[n.GetNodeID()] = true
+		<-bucket.nodeCacheLock
+		return nil
+	}
+	detailDistance := router.CalculateDetailDistance(myNodeID, n.GetNodeID())
+	for i := 0; i < len(bucket.nodeCache); i++ {
+		nodeDistance := router.CalculateDetailDistance(myNodeID, bucket.nodeCache[i].GetNodeID())
+		isInsert := false
+		for k := 0; k < len(detailDistance); k++ {
+			// 距离远就放后面
+			if detailDistance[k] > nodeDistance[k] {
+				break
+			}
+
+			if detailDistance[k] == nodeDistance[k] {
+				continue
+			}
+
+			// 插入排序
+			bigNodeIndex := i
+			newCache := []*commonModels.Node{n}
+			if bigNodeIndex == 0 {
+				bucket.nodeCache = append(newCache, bucket.nodeCache...)
+			} else {
+				frontCache := bucket.nodeCache[0:bigNodeIndex]
+				afterCache := bucket.nodeCache[bigNodeIndex:]
+				bucket.nodeCache = append(frontCache, append(newCache, afterCache...)...)
+			}
+
+			isInsert = true
+			break
+		}
+
+		// 如果比最后一位都要大，那么就直接放最后
+		if i == len(bucket.nodeCache)-1 && isInsert == false {
+			bucket.nodeCache = append(bucket.nodeCache, n)
+			isInsert = true
+		}
+
+		if isInsert {
+			break
+		}
+	}
+
 	bucket.nodeCacheHashMap[n.GetNodeID()] = true
 	<-bucket.nodeCacheLock
 	return nil
+}
+
+// GetNodeList 获取当前桶里的所有节点，按照距离排序
+func (bucket *Bucket) GetNodeList() []*commonModels.Node {
+	// var list []*commonModels.Node
+	// listCount := 0
+	// bucket.nodeCacheLock <- true
+	// for i := 0; i < len(bucket.nodeCache); i++ {
+	// 	if bucket.nodeCache[i] != nil {
+	// 		listCount++
+	// 		list = append(list, bucket.nodeCache[i])
+	// 	}
+	// }
+	// <-bucket.nodeCacheLock
+	// return list
+
+	return bucket.nodeCache
 }
 
 // GetRandomNode 获得一个随机节点，给tcp服务进行连接尝试
@@ -245,10 +320,10 @@ func (bucket *Bucket) IsNodeExist(n *commonModels.Node) bool {
 
 	// 高性能查找
 	bucket.nodeCacheLock <- true
-	_, exists := bucket.nodeCacheHashMap[n.GetNodeID()]
+	_, bucket.bucketTempIsNodeExist = bucket.nodeCacheHashMap[n.GetNodeID()]
 	<-bucket.nodeCacheLock
 
-	if exists == true {
+	if bucket.bucketTempIsNodeExist == true {
 		return true
 	}
 

@@ -2,7 +2,6 @@ package services
 
 import (
 	"math/rand"
-	"net"
 
 	commonModels "github.com/cnf_core/src/modules/net/common/models"
 	nodeConnectionModels "github.com/cnf_core/src/modules/net/nodeConnection/models"
@@ -15,49 +14,90 @@ import (
 
 // RunFindConnection 主动找可用节点
 func (ncService *NodeConnectionService) RunFindConnection(chanels map[string]chan map[string]interface{}) {
+	DoFindConnectionByNodeListEventMap := make(map[string]interface{})
+	DoFindConnectionByNodeListEventMap["event"] = "DoFindConnectionByNodeList"
+
+	DoFindNeighborEventMap := make(map[string]interface{})
+	DoFindNeighborEventMap["event"] = "DoFindNeighbor"
+
+	doFindConnLoop := 0
 	for {
-		timer.Sleep(1000 + rand.Intn(1000))
-		ncService.myPrivateChanel["nodeConnectionEventChanel"] <- map[string]interface{}{
-			"event": "doFindConnection",
+		timer.Sleep(100 + rand.Intn(100))
+
+		if doFindConnLoop == 0 {
+			ncService.myPrivateChanel["nodeConnectionEventChanel"] <- DoFindConnectionByNodeListEventMap
+			ncService.myPrivateChanel["nodeConnectionEventChanel"] <- DoFindNeighborEventMap
+		}
+		doFindConnLoop++
+		if doFindConnLoop == 20 {
+			doFindConnLoop = 0
 		}
 	}
 }
 
-// DoFindConnection 主动找可用节点
-func (ncService *NodeConnectionService) DoFindConnection(chanels map[string]chan map[string]interface{}) {
+// DoFindNeighbor 主动向周围的节点发起寻找邻居请求
+func (ncService *NodeConnectionService) DoFindNeighbor() {
+	var findNeighborPackString string
+	for i := 0; i < len(ncService.inBoundConn); i++ {
+		if ncService.inBoundConn[i] == nil {
+			continue
+		}
+		findNeighborPackString = ncService.GetFindNodePackString(ncService.inBoundConn[i].GetNodeID(), config.ParseNodeID(ncService.conf))
+		ncService.myPublicChanel["sendNodeConnectionMsgChanel"] <- map[string]interface{}{
+			"nodeConn": ncService.inBoundConn[i],
+			"message":  findNeighborPackString,
+		}
+	}
+
+	for i := 0; i < len(ncService.outBoundConn); i++ {
+		if ncService.outBoundConn[i] == nil {
+			continue
+		}
+		findNeighborPackString = ncService.GetFindNodePackString(ncService.outBoundConn[i].GetNodeID(), config.ParseNodeID(ncService.conf))
+		ncService.myPublicChanel["sendNodeConnectionMsgChanel"] <- map[string]interface{}{
+			"nodeConn": ncService.outBoundConn[i],
+			"message":  findNeighborPackString,
+		}
+	}
+
+}
+
+// DoFindConnectionByNodeList 主动找可用节点
+func (ncService *NodeConnectionService) DoFindConnectionByNodeList(chanels map[string]chan map[string]interface{}) {
 	// 如果outbound无空位，则不需要进行尝试连接
 	if ncService.IsOutBoundFull() == true {
 		return
 	}
-
-	nodeChanelMsg := <-chanels["bucketNodeChanel"]
-	newNode := nodeChanelMsg["node"].(*commonModels.Node)
-	// logger.Debug(config.ParseNodeID(ncService.conf) + " bucket : ")
-	// logger.Debug(ncService.inBoundConn)
-	// logger.Debug(ncService.outBoundConn)
-
-	// 不要和自己连接
-	if newNode.GetNodeID() == config.ParseNodeID(ncService.conf) {
+	// 队列为空就要退出，防止卡死协程
+	if len(chanels["bucketNodeListChanel"]) == 0 {
 		return
 	}
+	ncService.doConnectTempNodeListMsg = <-chanels["bucketNodeListChanel"]
+	ncService.doConnectTempNodeList = ncService.doConnectTempNodeListMsg["nodeList"].([]*commonModels.Node)
+	ncService.doConnectTempNewNode = nil
+	// 找到和自己距离最近的节点进行连接，NodeList已经排好了顺序
+	for i := 0; i < len(ncService.doConnectTempNodeList); i++ {
+		// 不要和自己连接
+		if ncService.doConnectTempNodeList[i].GetNodeID() == config.ParseNodeID(ncService.conf) {
+			continue
+		}
+		if ncService.IsBucketExistUnShakedNode(ncService.doConnectTempNodeList[i].GetNodeID()) || ncService.IsBucketExistShakedNode(ncService.doConnectTempNodeList[i].GetNodeID()) {
+			continue
+		}
+		ncService.doConnectTempNewNode = ncService.doConnectTempNodeList[i]
+	}
 
-	// 已经握手成功的节点，不需要重复建立连接
-	if ncService.IsBucketExistUnShakedNode(newNode.GetNodeID()) || ncService.IsBucketExistShakedNode(newNode.GetNodeID()) {
+	// 无可用节点连接
+	if ncService.doConnectTempNewNode == nil {
 		return
 	}
 
 	// 端口多路复用逻辑 Master节点会调用以下函数 MasterDoTryOutBoundConnect
 	ncService.myPublicChanel["submitNodeConnectionCreateChanel"] <- map[string]interface{}{
-		"newNode":         newNode, // 包含了ip:port:nodeID
+		"newNode":         ncService.doConnectTempNewNode, // 包含了ip:port:nodeID
 		"targetNodeID":    config.ParseNodeID(ncService.conf),
-		"shakePackString": ncService.GetShakePackString("outBound", newNode.GetNodeID()),
+		"shakePackString": ncService.GetShakePackString("outBound", ncService.doConnectTempNewNode.GetNodeID()),
 	}
-
-	// 非端口多路复用逻辑：
-	// tryOubountConnErr := ncService.DoTryOutBoundConnect(newNode)
-	// if tryOubountConnErr != nil {
-	// 	logger.Warn(tryOubountConnErr)
-	// }
 }
 
 // MasterDoTryOutBoundConnect master节点尝试建立连接，并创建一个NodeConn返回（端口多路复用函数
@@ -92,8 +132,8 @@ func (ncService *NodeConnectionService) MasterDoTryOutBoundConnect(newNode *comm
 		}
 
 		var nodeConn nodeConnectionModels.NodeConn
-		nodeConn.Build(outBoundSocket.GetSocket(), "outBound")
-		nodeConn.SetRemoteAddr((*outBoundSocket.GetSocket()).RemoteAddr().String())
+		nodeConn.Build(outBoundSocket, "outBound")
+		nodeConn.SetRemoteAddr((*outBoundSocket).RemoteAddr().String())
 		// 由于是主动发起连接的，所以要设置nodeID
 		nodeConn.SetNodeID(newNode.GetNodeID())
 		// 同时设置子节点的targetNodeID
@@ -132,25 +172,28 @@ func (ncService *NodeConnectionService) MasterDoTryOutBoundConnect(newNode *comm
 // MasterProcessOutboundTCPData 狂读TCP socket（端口多路复用函数
 func (ncService *NodeConnectionService) MasterProcessOutboundTCPData(nodeConn *nodeConnectionModels.NodeConn) {
 	chanel := ncService.myPrivateChanel["receiveNodeConnectionMsgChanel"] // 主节点的私有频道
+	var tcpSourceDataByte []byte
+	var length int
+	var readErr interface{}
+	var tcpSourceData string
+	var tcpData interface{}
+	var parseErr *error.Error
 	for {
-		tcpSourceDataByte := make([]byte, 1024)
+		tcpSourceDataByte = make([]byte, 1024)
 
-		length, readErr := (*nodeConn.Socket).Read(tcpSourceDataByte)
+		length, readErr = (*nodeConn.Socket).Read(tcpSourceDataByte)
 		if readErr != nil {
 			// 读取数据失败，说明socket已经断掉，所以要结束这个socket
 			(*nodeConn.Socket).Close()
 			ncService.DeleteMasterOutBoundConn(nodeConn)
 
 			// TODO 通知子节点删除这个outBound连接
-
-			// logger.Debug(config.ParseNodeID(ncService.conf) + " outBound relive")
-			// logger.Debug(readErr)
 			return
 		}
 
-		tcpSourceData := string(tcpSourceDataByte[:length])
+		tcpSourceData = string(tcpSourceDataByte[:length])
 
-		tcpData, parseErr := ncService.ParseTCPData(tcpSourceData)
+		tcpData, parseErr = ncService.ParseTCPData(tcpSourceData)
 		if parseErr != nil {
 			logger.Error(parseErr.GetMessage())
 			continue
@@ -166,12 +209,10 @@ func (ncService *NodeConnectionService) MasterProcessOutboundTCPData(nodeConn *n
 
 // SalveHandleNodeOutBoundConnectionCreateEvent 子节点处理节点创建成功事件。
 func (ncService *NodeConnectionService) SalveHandleNodeOutBoundConnectionCreateEvent(nodeConnectionCreateResp map[string]interface{}) {
-	// logger.Debug(nodeConnectionCreateResp)
 	nodeConn := nodeConnectionCreateResp["nodeConn"].(*nodeConnectionModels.NodeConn)
 	addConnErr := ncService.AddOutBoundConn(nodeConn)
 
 	if addConnErr != nil {
-		// logger.Error("子节点中，添加节点到outbound失败")
 		return
 	}
 
@@ -185,38 +226,6 @@ func (ncService *NodeConnectionService) SalveHandleNodeOutBoundConnectionCreateE
 		"message":  shakePackageString,
 	}
 	nodeConn.SetShaker(nil)
-}
-
-// DoTryOutBoundConnect 尝试进行主动连接（非端口多路复用函数
-func (ncService *NodeConnectionService) DoTryOutBoundConnect(node *commonModels.Node) *error.Error {
-	nodeAddress := node.GetIP() + ":" + node.GetServicePort()
-	conn, connErr := net.Dial("tcp", nodeAddress)
-
-	if connErr != nil {
-		return error.New(map[string]interface{}{
-			"message": "主动创建tcp连接失败",
-		})
-	}
-
-	// 先处理好这个conn，再去处理他收到的消息
-	remoteAddr := conn.RemoteAddr()
-	var nodeConn nodeConnectionModels.NodeConn
-	nodeConn.Build(&conn, "outBound")
-	nodeConn.SetRemoteAddr(remoteAddr.String())
-	// 由于是主动发起连接的，所以要设置nodeID
-	nodeConn.SetNodeID(node.GetNodeID())
-
-	// 添加一个未握手的连接到OutBoundConn里面去
-	addConnErr := ncService.AddOutBoundConn(&nodeConn)
-	if addConnErr != nil {
-		return addConnErr
-	}
-
-	// 由于是outbound，所以连接成功就马上发送一个握手包
-	ncService.SendShake(&nodeConn, node.GetNodeID())
-
-	go ncService.ProcessOutboundTCPData(&nodeConn)
-	return nil
 }
 
 // ProcessOutboundTCPData 狂读TCP socket
@@ -233,8 +242,6 @@ func (ncService *NodeConnectionService) ProcessOutboundTCPData(nodeConn *nodeCon
 
 			// 释放一个outBound限制
 			<-ncService.limitTCPOutboundConn
-			// logger.Debug(config.ParseNodeID(ncService.conf) + " outBound relive")
-			// logger.Debug(readErr)
 			return
 		}
 

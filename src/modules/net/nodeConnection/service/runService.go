@@ -33,10 +33,16 @@ func (ncService *NodeConnectionService) RunService(chanels map[string]chan map[s
 	ncService.tcpListener = tcpListener
 	signal <- true
 
+	// 初始化循环变量
+	var conn net.Conn
+	var acceptErr interface{}
+	var remoteAddr net.Addr
+	var addConnErr interface{}
+
 	for {
 		ncService.limitTCPInboundConn <- true
 
-		conn, acceptErr := ncService.tcpListener.Accept()
+		conn, acceptErr = ncService.tcpListener.Accept()
 		if acceptErr != nil {
 			logger.Error("被动连接发生错误")
 			<-ncService.limitTCPInboundConn
@@ -44,13 +50,13 @@ func (ncService *NodeConnectionService) RunService(chanels map[string]chan map[s
 		}
 
 		// 先处理好这个conn，再去处理他收到的消息
-		remoteAddr := conn.RemoteAddr()
+		remoteAddr = conn.RemoteAddr()
 		var nodeConn nodeConnectionModels.NodeConn
 		nodeConn.Build(&conn, "inBound")
 		nodeConn.SetRemoteAddr(remoteAddr.String())
 
 		// 添加一个未握手的连接到InBoundConn里面去
-		addConnErr := ncService.AddInBoundSocket(&nodeConn)
+		addConnErr = ncService.AddInBoundSocket(&nodeConn)
 		if addConnErr != nil {
 			// 连接失败就要关闭掉这条socket
 			(*nodeConn.Socket).Close()
@@ -75,8 +81,17 @@ func (ncService *NodeConnectionService) SalveHandleNodeInBoundConnectionCreateEv
 // ProcessInboundTCPData 狂读TCP socket
 func (ncService *NodeConnectionService) ProcessInboundTCPData(nodeConn *nodeConnectionModels.NodeConn) {
 	chanel := ncService.myPrivateChanel["receiveNodeConnectionMsgChanel"]
+
+	// 初始化循环变量
+	var tcpSourceDataByte []byte
+	var length int
+	var readErr interface{}
+	var tcpSourceData string
+	var tcpData interface{}
+	var parseErr *error.Error
+
 	for {
-		tcpSourceDataByte := make([]byte, 2048)
+		tcpSourceDataByte = make([]byte, 2048)
 
 		// 断包粘包处理方式（目前出现得不多，先不管了）
 		// length := 0
@@ -95,7 +110,7 @@ func (ncService *NodeConnectionService) ProcessInboundTCPData(nodeConn *nodeConn
 		// 	if length == tcpSourceDataByte
 		// }
 
-		length, readErr := (*nodeConn.Socket).Read(tcpSourceDataByte)
+		length, readErr = (*nodeConn.Socket).Read(tcpSourceDataByte)
 		if readErr != nil {
 			// TODO 连接失败要全部子节点都断掉
 
@@ -106,9 +121,9 @@ func (ncService *NodeConnectionService) ProcessInboundTCPData(nodeConn *nodeConn
 			return
 		}
 
-		tcpSourceData := string(tcpSourceDataByte[:length])
+		tcpSourceData = string(tcpSourceDataByte[:length])
 
-		tcpData, parseErr := ncService.ParseTCPData(tcpSourceData)
+		tcpData, parseErr = ncService.ParseTCPData(tcpSourceData)
 		if parseErr != nil {
 			logger.Error(tcpSourceData)
 			logger.Error(parseErr.GetMessage())
@@ -125,20 +140,27 @@ func (ncService *NodeConnectionService) ProcessInboundTCPData(nodeConn *nodeConn
 
 // HandleNodeConnectionEventChanel 处理发现服务的所有事件
 func (ncService *NodeConnectionService) HandleNodeConnectionEventChanel() {
+	var eventData map[string]interface{}
+	var nodeConnReceiveErr *error.Error
 	for {
-		eventData := <-ncService.myPrivateChanel["nodeConnectionEventChanel"]
+		eventData = <-ncService.myPrivateChanel["nodeConnectionEventChanel"]
 
 		if eventData["event"] == "receiveMsg" {
 			// 交给发现服务模块处理消息，把结果透传回来即可
-			_, nodeConnReceiveErr := ncService.ReceiveMsg(eventData["tcpData"])
+			_, nodeConnReceiveErr = ncService.ReceiveMsg(eventData["tcpData"])
 			if nodeConnReceiveErr != nil {
 				logger.Warn(nodeConnReceiveErr)
 			}
 			continue
 		}
 
-		if eventData["event"] == "doFindConnection" {
-			ncService.DoFindConnection(ncService.myPrivateChanel)
+		if eventData["event"] == "DoFindConnectionByNodeList" {
+			ncService.DoFindConnectionByNodeList(ncService.myPrivateChanel)
+			continue
+		}
+
+		if eventData["event"] == "DoFindNeighbor" {
+			ncService.DoFindNeighbor()
 			continue
 		}
 	}

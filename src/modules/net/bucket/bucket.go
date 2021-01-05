@@ -1,6 +1,8 @@
 package bucket
 
 import (
+	"math/rand"
+
 	commonModels "github.com/cnf_core/src/modules/net/common/models"
 	error "github.com/cnf_core/src/utils/error"
 	"github.com/cnf_core/src/utils/timer"
@@ -9,57 +11,100 @@ import (
 // RunService 负责接收Bucket chanel的消息，并持续处理
 // 可能添加new tried节点路由，也可能是添加邻居路由
 func (bucket *Bucket) RunService(chanels map[string]chan map[string]interface{}) *error.Error {
-	// 接收的
-	// go bucket.HandleBucketOperate(chanels["bucketOperateChanel"])
+	bucket.myPrivateChanel = chanels
 
-	// 往外输出的
-	go bucket.HandleBucketSeed(chanels["bucketSeedChanel"])
-	go bucket.HandleBucketNode(chanels["bucketNodeChanel"])
+	// 管理整个bucket的消息队列
+	go bucket.HandleBucketOperate()
 
-	return nil
+	seedLoop := 0
+	pushBucketSeedEventMap := make(map[string]interface{})
+	pushBucketSeedEventMap["event"] = "pushBucketSeed"
+
+	pushNodeListChanelEventMap := make(map[string]interface{})
+	pushNodeListChanelEventMap["event"] = "pushNodeListChanel"
+
+	collectSeedFromConfEventMap := make(map[string]interface{})
+	collectSeedFromConfEventMap["event"] = "collectSeedFromConf"
+	for {
+		timer.Sleep(100 + rand.Intn(100))
+
+		bucket.myPrivateChanel["bucketOperateChanel"] <- pushBucketSeedEventMap
+
+		bucket.myPrivateChanel["bucketOperateChanel"] <- pushNodeListChanelEventMap
+
+		if seedLoop == 0 {
+			bucket.myPrivateChanel["bucketOperateChanel"] <- collectSeedFromConfEventMap
+		}
+		seedLoop++
+		if seedLoop >= 10 {
+			seedLoop = 0
+		}
+	}
 }
 
-// ReceiveBucketOperateMsg 消息队列推送Bucket操作事件过来时响应
-func (bucket *Bucket) ReceiveBucketOperateMsg(bucketOperate map[string]interface{}) {
-	node := bucketOperate["node"].(*commonModels.Node)
-	if bucketOperate["bucketEvent"] == "addNew" {
-		bucket.AddNewNode(node)
+// HandleBucketOperate 接收数据 主要管理bucket添加节点操作
+func (bucket *Bucket) HandleBucketOperate() {
+	chanel := bucket.myPrivateChanel["bucketOperateChanel"]
+	var bucketOperate map[string]interface{}
+	for {
+		bucketOperate = <-chanel
+		if bucketOperate["event"] == "addNew" {
+			bucket.AddNewNode(bucketOperate["node"].(*commonModels.Node))
+		}
+
+		if bucketOperate["event"] == "pushBucketSeed" {
+			bucket.HandleBucketSeed()
+		}
+
+		if bucketOperate["event"] == "pushNodeListChanel" {
+			bucket.HandleBucketNodeList()
+		}
+
+		if bucketOperate["event"] == "collectSeedFromConf" {
+			// 桶里如果没有东西，就要找种子源了
+			if len(bucket.nodeCache) != 0 {
+				continue
+			}
+			bucket.CollectSeedFromConf()
+		}
 	}
 }
 
 // HandleBucketSeed 推送数据 这里主要是对外输出可用Seed，给节点发现服务用为主
-func (bucket *Bucket) HandleBucketSeed(chanel chan map[string]interface{}) {
-	for {
-		seed := bucket.GetSeed()
-		// 没有种子，就从配置里面获取新的种子
-		if seed == nil {
-			timer.Sleep(1000)
-			bucket.CollectSeedFromConf()
-			continue
-		}
+func (bucket *Bucket) HandleBucketSeed() {
+	// 满了就不要阻塞队列了
+	if len(bucket.myPrivateChanel["bucketSeedChanel"]) == cap(bucket.myPrivateChanel["bucketSeedChanel"]) {
+		return
+	}
 
-		// 检查桶里是否已经有这个Node了，有的话就不推了
-		if bucket.IsNodeExist(seed) == true {
-			// logger.Debug(bucket.conf.(map[string]interface{})["number"].(string) + " newNode is exists")
-			continue
-		}
+	bucket.bucketTempSeed = bucket.GetSeed()
+	if bucket.bucketTempSeed == nil {
+		// logger.Debug(bucket.conf.(map[string]interface{})["number"].(string) + " no seed")
+		return
+	}
 
-		chanel <- map[string]interface{}{
-			"node": seed,
-		}
+	// 检查桶里是否已经有这个Node了，有的话就不推了
+	if bucket.IsNodeExist(bucket.bucketTempSeed) == true {
+		// logger.Debug(bucket.conf.(map[string]interface{})["number"].(string) + " newNode is exists")
+		return
+	}
+	bucket.myPrivateChanel["bucketSeedChanel"] <- map[string]interface{}{
+		"node": bucket.bucketTempSeed,
 	}
 }
 
-// HandleBucketNode 输出可用Node 主要对外输出可用Node，给节点连接服务为主
-func (bucket *Bucket) HandleBucketNode(chanel chan map[string]interface{}) {
-	for {
-		node := bucket.GetRandomNode()
-		if node == nil {
-			timer.Sleep(2000)
-			continue
-		}
-		chanel <- map[string]interface{}{
-			"node": node,
-		}
+// HandleBucketNodeList 输出可用Node列表，外部进行筛选
+func (bucket *Bucket) HandleBucketNodeList() {
+	// 满了就不要阻塞队列了
+	if len(bucket.myPrivateChanel["bucketNodeListChanel"]) == cap(bucket.myPrivateChanel["bucketNodeListChanel"]) {
+		return
+	}
+
+	bucket.bucketTempNodeList = bucket.GetNodeList()
+	if len(bucket.bucketTempNodeList) == 0 {
+		return
+	}
+	bucket.myPrivateChanel["bucketNodeListChanel"] <- map[string]interface{}{
+		"nodeList": bucket.bucketTempNodeList,
 	}
 }

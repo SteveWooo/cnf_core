@@ -3,14 +3,12 @@ package net
 import (
 	nodeConnectionModels "github.com/cnf_core/src/modules/net/nodeConnection/models"
 	"github.com/cnf_core/src/utils/config"
+	"github.com/cnf_core/src/utils/error"
 	logger "github.com/cnf_core/src/utils/logger"
 )
 
 // RunMessageQueue 处理各个消息队列
 func (cnfNet *CnfNet) RunMessageQueue(chanels map[string]chan map[string]interface{}) {
-	// 路由bucket 的队列
-	go cnfNet.HandleBucketOperate(chanels)
-
 	// discover 接收消息的队列
 	go cnfNet.HandleDiscoverMsgReceive(chanels)
 	go cnfNet.HandleSubNodeDiscoverMsgReceive(chanels)
@@ -37,12 +35,15 @@ func (cnfNet *CnfNet) RunMessageQueue(chanels map[string]chan map[string]interfa
 func (cnfNet *CnfNet) HandleDiscoverMsgReceive(chanels map[string]chan map[string]interface{}) {
 	confNet := cnfNet.conf.(map[string]interface{})["net"]
 	if confNet.(map[string]interface{})["masterServer"] == "true" {
+		var udpData map[string]interface{}
+		var targetChanel interface{}
+		var exist bool
 		for {
-			udpData := <-chanels["receiveDiscoverMsgChanel"] // 发现服务的udp socket如果收不到消息，就会卡死这条协程。
-			chanel, exist := cnfNet.publicChanels[udpData["targetNodeID"].(string)]
+			udpData = <-chanels["receiveDiscoverMsgChanel"] // 发现服务的udp socket如果收不到消息，就会卡死这条协程。
+			targetChanel, exist = cnfNet.publicChanels[udpData["targetNodeID"].(string)]
 			// logger.Debug(udpData["targetNodeID"].(string) + " receive")
 			if exist {
-				chanel.(map[string]chan map[string]interface{})["receiveDiscoverMsgChanel"] <- udpData
+				targetChanel.(map[string]chan map[string]interface{})["receiveDiscoverMsgChanel"] <- udpData
 			} else {
 				// logger.Error("接收到未知Udp数据包，本服务器无该节点 - 1:" + udpData["targetNodeID"].(string))
 			}
@@ -52,10 +53,13 @@ func (cnfNet *CnfNet) HandleDiscoverMsgReceive(chanels map[string]chan map[strin
 
 // HandleSubNodeDiscoverMsgReceive 公共节点接收master节点的消息推送服务
 func (cnfNet *CnfNet) HandleSubNodeDiscoverMsgReceive(chanels map[string]chan map[string]interface{}) {
+	myNodeID := config.ParseNodeID(cnfNet.conf)
+	var udpData map[string]interface{}
 	for {
-		myNodeID := config.ParseNodeID(cnfNet.conf)
-		udpData := <-cnfNet.publicChanels[myNodeID].(map[string]chan map[string]interface{})["receiveDiscoverMsgChanel"]
+		udpData = <-cnfNet.publicChanels[myNodeID].(map[string]chan map[string]interface{})["receiveDiscoverMsgChanel"]
+		if udpData != nil {
 
+		}
 		// logger.Debug(udpData)
 		cnfNet.myPrivateChanel["discoverEventChanel"] <- map[string]interface{}{
 			"event":   "receiveMsg",
@@ -73,22 +77,14 @@ func (cnfNet *CnfNet) HandleDiscoverMsgSend(chanels map[string]chan map[string]i
 		for nodeID, chanel := range cnfNet.publicChanels {
 			// 匿名函数，循环获取子节点的消息发送队列请求，然后替子节点发送消息
 			getMessageFromSubChanel := func(nid string, c map[string]chan map[string]interface{}) {
+				var sendingData map[string]interface{}
 				for {
-					sendingData := <-c["sendDiscoverMsgChanel"]
+					sendingData = <-c["sendDiscoverMsgChanel"]
 					cnfNet.discover.SendMsg(sendingData["message"].(string), sendingData["targetIP"].(string), sendingData["targetServicePort"].(string))
 				}
 			}
 			go getMessageFromSubChanel(nodeID, chanel.(map[string]chan map[string]interface{}))
 		}
-	}
-}
-
-// HandleBucketOperate 接收数据 主要管理bucket添加节点操作
-func (cnfNet *CnfNet) HandleBucketOperate(chanels map[string]chan map[string]interface{}) {
-	for {
-		bucketOperate := <-chanels["bucketOperateChanel"]
-		// logger.Debug(bucketOperate)
-		cnfNet.bucket.ReceiveBucketOperateMsg(bucketOperate)
 	}
 }
 
@@ -99,9 +95,12 @@ func (cnfNet *CnfNet) HandleSubNodeSubmitNodeConnectionCreate(chanels map[string
 		for nodeID, subNodeChanel := range cnfNet.publicChanels {
 			// 匿名函数，循环获取子节点的创建连接请求
 			getNodeConnCreateReq := func(nid string, c map[string]chan map[string]interface{}) {
+				var nodeConnCreateReq map[string]interface{}
+				var nodeConnCreateMsg interface{}
+				var nodeConnCreateErr *error.Error
 				for {
-					nodeConnCreateReq := <-c["submitNodeConnectionCreateChanel"]
-					nodeConnCreateMsg, nodeConnCreateErr := cnfNet.nodeConnection.MasterDoTryOutBoundConnect(nodeConnCreateReq)
+					nodeConnCreateReq = <-c["submitNodeConnectionCreateChanel"]
+					nodeConnCreateMsg, nodeConnCreateErr = cnfNet.nodeConnection.MasterDoTryOutBoundConnect(nodeConnCreateReq)
 					if nodeConnCreateErr != nil {
 						logger.Error("连接创建失败")
 						continue
@@ -139,13 +138,17 @@ func (cnfNet *CnfNet) HandleSubNodeSendNodeConnectionMsg(chanels map[string]chan
 		for nodeID, subNodeChanel := range cnfNet.publicChanels {
 			// 匿名函数，循环获取子节点的创建连接请求
 			getSubNodeSendNodeConnectionMsgReq := func(nid string, c map[string]chan map[string]interface{}) {
+				var sendNodeConnectionMsgReq map[string]interface{}
+				var tcpMessage string
+				var tcpData interface{}
+				var tempNodeConn *nodeConnectionModels.NodeConn
 				for {
-					sendNodeConnectionMsgReq := <-c["sendNodeConnectionMsgChanel"]
-					tcpMessage := sendNodeConnectionMsgReq["message"].(string)
+					sendNodeConnectionMsgReq = <-c["sendNodeConnectionMsgChanel"]
+					tcpMessage = sendNodeConnectionMsgReq["message"].(string)
 					// 本地节点消息，直接发送即可
 					if sendNodeConnectionMsgReq["nodeConn"] == nil || sendNodeConnectionMsgReq["nodeConn"].(*nodeConnectionModels.NodeConn).GetSocket() == nil {
 						// 直接转发给本地节点，不需要走socket
-						tcpData, _ := cnfNet.nodeConnection.ParseTCPData(tcpMessage)
+						tcpData, _ = cnfNet.nodeConnection.ParseTCPData(tcpMessage)
 						chanels["receiveNodeConnectionMsgChanel"] <- map[string]interface{}{
 							"nodeConn":     nil,
 							"tcpData":      tcpData,
@@ -154,9 +157,9 @@ func (cnfNet *CnfNet) HandleSubNodeSendNodeConnectionMsg(chanels map[string]chan
 					}
 
 					// 非本地节点，使用socket发送数据报文
-					nodeConn := sendNodeConnectionMsgReq["nodeConn"].(*nodeConnectionModels.NodeConn)
-					if nodeConn.GetSocket() != nil {
-						cnfNet.nodeConnection.SendMsg(nodeConn, tcpMessage)
+					tempNodeConn = sendNodeConnectionMsgReq["nodeConn"].(*nodeConnectionModels.NodeConn)
+					if tempNodeConn.GetSocket() != nil {
+						cnfNet.nodeConnection.SendMsg(tempNodeConn, tcpMessage)
 					}
 				}
 			}
@@ -169,16 +172,17 @@ func (cnfNet *CnfNet) HandleSubNodeSendNodeConnectionMsg(chanels map[string]chan
 func (cnfNet *CnfNet) HandleNodeConnectionMsgReceive(chanels map[string]chan map[string]interface{}) {
 	confNet := cnfNet.conf.(map[string]interface{})["net"]
 	if confNet.(map[string]interface{})["masterServer"] == "true" {
+		var connectionMsg map[string]interface{}
+		var tcpData interface{}
+		var localChanel interface{}
+		var isChanelExist bool
 		for {
-			connectionMsg := <-chanels["receiveNodeConnectionMsgChanel"]
-			tcpData := connectionMsg["tcpData"]
+			connectionMsg = <-chanels["receiveNodeConnectionMsgChanel"]
+			tcpData = connectionMsg["tcpData"]
 
-			// logger.Debug(tcpData)
-			// TODO 如果nodeConn为nil，就创建一个。因为是本地连接
-
-			chanel, exist := cnfNet.publicChanels[tcpData.(map[string]interface{})["targetNodeID"].(string)]
-			if exist {
-				chanel.(map[string]chan map[string]interface{})["receiveNodeConnectionMsgChanel"] <- connectionMsg
+			localChanel, isChanelExist = cnfNet.publicChanels[tcpData.(map[string]interface{})["targetNodeID"].(string)]
+			if isChanelExist {
+				localChanel.(map[string]chan map[string]interface{})["receiveNodeConnectionMsgChanel"] <- connectionMsg
 			} else {
 				logger.Error("接收到未知NodeID tcp数据包，本服务器无该节点")
 			}
@@ -189,13 +193,9 @@ func (cnfNet *CnfNet) HandleNodeConnectionMsgReceive(chanels map[string]chan map
 // HandleSubNodeConnectionMsgReceive 公共节点接收master节点的消息推送服务
 func (cnfNet *CnfNet) HandleSubNodeConnectionMsgReceive(chanels map[string]chan map[string]interface{}) {
 	myNodeID := config.ParseNodeID(cnfNet.conf)
+	var connectionMsg map[string]interface{}
 	for {
-		connectionMsg := <-cnfNet.publicChanels[myNodeID].(map[string]chan map[string]interface{})["receiveNodeConnectionMsgChanel"]
-		// 交给发现服务模块处理消息
-		// nodeConnReceiveErr := cnfNet.nodeConnection.ReceiveMsg(connectionMsg)
-		// if nodeConnReceiveErr != nil {
-		// 	logger.Warn(nodeConnReceiveErr)
-		// }
+		connectionMsg = <-cnfNet.publicChanels[myNodeID].(map[string]chan map[string]interface{})["receiveNodeConnectionMsgChanel"]
 
 		cnfNet.myPrivateChanel["nodeConnectionEventChanel"] <- map[string]interface{}{
 			"event":   "receiveMsg",

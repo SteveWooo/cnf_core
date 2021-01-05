@@ -41,6 +41,11 @@ type NodeConnectionService struct {
 	// 主节点的内外连接（带socket），用目标nodeID索引
 	masterInBoundConn  map[string][]*nodeConnectionModels.NodeConn
 	masterOutBoundConn map[string][]*nodeConnectionModels.NodeConn
+
+	// 一些临时变量
+	doConnectTempNodeListMsg map[string]interface{}
+	doConnectTempNodeList    []*commonModels.Node
+	doConnectTempNewNode     *commonModels.Node
 }
 
 // Build 节点通讯服务的初始化
@@ -59,10 +64,12 @@ func (ncService *NodeConnectionService) Build(conf interface{}, myPublicChanel m
 	ncService.outBoundConn = make([]*nodeConnectionModels.NodeConn, OUTBOUND_CONN_MAX)
 
 	// 创建统一socket
-	ncService.limitTCPInboundConn = make(chan bool, 10240)
-	ncService.limitTCPOutboundConn = make(chan bool, 10240)
-	ncService.masterOutBoundSocket = make([]*nodeConnectionModels.NodeConn, 10240)
-	ncService.masterInBoundSocket = make([]*nodeConnectionModels.NodeConn, 10240)
+	if confNet.(map[string]interface{})["masterServer"] == "true" {
+		ncService.limitTCPInboundConn = make(chan bool, 10240)
+		ncService.limitTCPOutboundConn = make(chan bool, 10240)
+		ncService.masterOutBoundSocket = make([]*nodeConnectionModels.NodeConn, 10240)
+		ncService.masterInBoundSocket = make([]*nodeConnectionModels.NodeConn, 10240)
+	}
 
 	// 设置tcp消息读取协程上限(目前没用上，做成高性能tcp服务器需要用到，参考UDP服务部分实现)
 	ncService.limitProcessTCPData = make(chan bool, 5)
@@ -125,23 +132,14 @@ func (ncService *NodeConnectionService) CheckBoundAddress(ip string, servicePort
 // @return nodeConn 带socket的nodeConn对象
 // @return isNew 是否新对象，如果是新socket，要读数据
 // @return error 错误
-func (ncService *NodeConnectionService) GetOutBoundSocket(newNode *commonModels.Node, targetNodeID string) (*nodeConnectionModels.NodeConn, bool, *error.Error) {
+func (ncService *NodeConnectionService) GetOutBoundSocket(newNode *commonModels.Node, targetNodeID string) (*net.Conn, bool, *error.Error) {
 	for i := 0; i < len(ncService.masterOutBoundSocket); i++ {
 		if ncService.masterOutBoundSocket[i] == nil {
 			continue
 		}
 
 		if newNode.GetIP() == ncService.masterOutBoundSocket[i].GetSenderIP() && newNode.GetServicePort() == ncService.masterOutBoundSocket[i].GetSenderServicePort() {
-			var nodeConn nodeConnectionModels.NodeConn
-			// 复用socket
-			nodeConn.Build(ncService.masterOutBoundSocket[i].GetSocket(), "outBound")
-			nodeConn.SetRemoteAddr(ncService.masterOutBoundSocket[i].GetSenderIP() + ":" + ncService.masterOutBoundSocket[i].GetSenderServicePort())
-			// 设置新的目标节点nodeID
-			nodeConn.SetNodeID(newNode.GetNodeID())
-			// 设置子节点的ID，作为自己的唯一标识
-			nodeConn.SetTargetNodeID(targetNodeID)
-
-			return &nodeConn, false, nil
+			return ncService.masterOutBoundSocket[i].GetSocket(), false, nil
 		}
 	}
 
@@ -157,19 +155,9 @@ func (ncService *NodeConnectionService) GetOutBoundSocket(newNode *commonModels.
 				"message": "主动创建tcp连接失败",
 			})
 		}
-		remoteAddr := conn.RemoteAddr()
-		var nodeConn nodeConnectionModels.NodeConn
-		nodeConn.Build(&conn, "outBound")
-		nodeConn.SetRemoteAddr(remoteAddr.String())
-		// 由于是主动发起连接的，所以要设置nodeID
-		nodeConn.SetNodeID(newNode.GetNodeID())
-		// 同时设置子节点的targetNodeID
-		nodeConn.SetTargetNodeID(targetNodeID)
+		// logger.Debug(config.ParseNodeID(ncService.conf) + " created socket")
 
-		// 放入到主socket池中
-		ncService.masterOutBoundSocket[i] = &nodeConn
-
-		return &nodeConn, true, nil
+		return &conn, true, nil
 	}
 
 	return nil, false, error.New(map[string]interface{}{

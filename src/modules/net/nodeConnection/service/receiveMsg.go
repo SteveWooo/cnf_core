@@ -8,24 +8,35 @@ import (
 	nodeConnectionModels "github.com/cnf_core/src/modules/net/nodeConnection/models"
 	"github.com/cnf_core/src/utils/config"
 	"github.com/cnf_core/src/utils/error"
+	"github.com/cnf_core/src/utils/logger"
 )
 
 // ReceiveMsg 处理接收nodeConnetion消息，这里主要做分流
 func (ncService *NodeConnectionService) ReceiveMsg(data interface{}) (interface{}, *error.Error) {
-	tcpData := data.(map[string]interface{})["tcpData"]
-	// logger.Debug(tcpData)
+	logger.Debug(data.(map[string]interface{})["tcpData"])
 
 	// 收到握手请求时，因为很有可能接收方没有一个连接对象。
-	if tcpData.(map[string]interface{})["event"] == "shakeEvent" {
+	if data.(map[string]interface{})["tcpData"].(map[string]interface{})["event"] == "shakeEvent" {
 		// logger.Debug(config.ParseNodeID(ncService.conf) + " get shaked")
 		return ncService.HandleShakeEvent(data)
 	}
 
-	if tcpData.(map[string]interface{})["event"] == "shakeDestroyEvent" {
+	if data.(map[string]interface{})["tcpData"].(map[string]interface{})["event"] == "shakeDestroyEvent" {
 		// logger.Debug("getDestroy")
 		return ncService.HandleShakeDestroyEvent(data)
 	}
 
+	if data.(map[string]interface{})["tcpData"].(map[string]interface{})["event"] == "findNode" {
+		// logger.Debug("getDestroy")
+		return ncService.HandleFindNode(data)
+	}
+
+	return nil, nil
+}
+
+// HandleFindNode 处理邻居节点寻找的请求
+func (ncService *NodeConnectionService) HandleFindNode(data interface{}) (interface{}, *error.Error) {
+	// TODO
 	return nil, nil
 }
 

@@ -33,8 +33,16 @@ func (bucket *Bucket) GetStatus() map[string]interface{} {
 	}
 	<-bucket.triedBucketLock
 
-	serviceStatus["newBucket"] = newBucket
-	serviceStatus["triedBucket"] = triedBucket
+	bucket.nodeCacheLock <- true
+	for i := 0; i < len(bucket.nodeCache); i++ {
+		newBucket = append(newBucket, bucket.nodeCache[i].GetNodeID())
+	}
 
+	// serviceStatus["newBucket"] = newBucket
+	// serviceStatus["triedBucket"] = triedBucket
+
+	serviceStatus["newBucket"] = newBucket
+
+	<-bucket.nodeCacheLock
 	return serviceStatus
 }

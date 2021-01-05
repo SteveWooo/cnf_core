@@ -80,8 +80,8 @@ func (discoverService *DiscoverService) ReceiveMsg(data interface{}) (interface{
 		// }
 
 		return map[string]interface{}{
-			"bucketEvent": "addNew",
-			"node":        newNode,
+			"event": "addNew",
+			"node":  newNode,
 		}, nil
 	}
 

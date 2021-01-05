@@ -83,12 +83,16 @@ func (discoverService *DiscoverService) ProcessUDPData(chanel chan map[string]in
 
 // HandleDiscoverEventChanel 处理发现服务的所有事件
 func (discoverService *DiscoverService) HandleDiscoverEventChanel() {
+	// 变量全体初始化，不要在循环体内创建
+	var bucketOperate interface{}
+	var receiveErr *error.Error
+	eventData := make(map[string]interface{})
 	for {
-		eventData := <-discoverService.myPrivateChanel["discoverEventChanel"]
+		eventData = <-discoverService.myPrivateChanel["discoverEventChanel"]
 
 		if eventData["event"] == "receiveMsg" {
 			// 交给发现服务模块处理消息，把结果透传回来即可
-			bucketOperate, receiveErr := discoverService.ReceiveMsg(eventData["udpData"])
+			bucketOperate, receiveErr = discoverService.ReceiveMsg(eventData["udpData"])
 			if receiveErr != nil {
 				// 不处理
 				// logger.Warn(receiveErr.GetMessage())
