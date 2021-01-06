@@ -33,7 +33,7 @@ func (nc *NodeConnection) RunService(chanels map[string]chan map[string]interfac
 func (nc *NodeConnection) RunFindConnection(chanels map[string]chan map[string]interface{}) *error.Error {
 	nc.service.RunFindConnection(chanels)
 	// 启动监控，主要防止双向链接
-	go nc.service.RunMonitor()
+	// go nc.service.RunMonitor()
 	return nil
 }
 

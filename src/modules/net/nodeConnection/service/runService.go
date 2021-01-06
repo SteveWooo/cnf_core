@@ -154,13 +154,18 @@ func (ncService *NodeConnectionService) HandleNodeConnectionEventChanel() {
 			continue
 		}
 
-		if eventData["event"] == "DoFindConnectionByNodeList" {
+		if eventData["event"] == "doFindConnectionByNodeList" {
 			ncService.DoFindConnectionByNodeList(ncService.myPrivateChanel)
 			continue
 		}
 
-		if eventData["event"] == "DoFindNeighbor" {
+		if eventData["event"] == "doFindNeighbor" {
 			ncService.DoFindNeighbor()
+			continue
+		}
+
+		if eventData["event"] == "doMonitor" {
+			ncService.RunMonitor()
 			continue
 		}
 	}

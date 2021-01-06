@@ -33,15 +33,17 @@ func CalculateDistance(nodeID1 string, nodeID2 string) int {
 }
 
 // CalculateDetailDistance 计算两个节点之间的距离
-func CalculateDetailDistance(nodeID1 string, nodeID2 string) [64]int64 {
-	var sourceID [64]int64
+func CalculateDetailDistance(nodeID1 string, nodeID2 string) []int64 {
+	var sourceID []int64
 
 	nodeID1 = nodeID1[2:len(nodeID1)]
 	nodeID2 = nodeID2[2:len(nodeID2)]
+	// 初始化 sourceID 的长度
 	// 比较两个nodeId的异或距离
 	for i := 0; i < len(nodeID1); i += 2 {
 		base1, _ := strconv.ParseInt(nodeID1[i:i+2], 16, 10)
 		base2, _ := strconv.ParseInt(nodeID2[i:i+2], 16, 10)
+		sourceID = append(sourceID, 1)
 		sourceID[i/2] = base1 ^ base2
 	}
 

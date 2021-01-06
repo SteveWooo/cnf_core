@@ -5,15 +5,17 @@ import (
 
 	commonModels "github.com/cnf_core/src/modules/net/common/models"
 	nodeConnectionModels "github.com/cnf_core/src/modules/net/nodeConnection/models"
+	"github.com/cnf_core/src/utils/config"
 	"github.com/cnf_core/src/utils/error"
 )
 
 var INBOUND_CONN_MAX int = 117
-var OUTBOUND_CONN_MAX int = 20
+var OUTBOUND_CONN_MAX int = 8
 
 // NodeConnectionService 节点连接服务的tcp handle
 type NodeConnectionService struct {
 	conf        interface{}
+	myNodeID    string
 	socketAddr  string
 	tcpListener net.Listener
 
@@ -43,15 +45,22 @@ type NodeConnectionService struct {
 	masterOutBoundConn map[string][]*nodeConnectionModels.NodeConn
 
 	// 一些临时变量
-	doConnectTempNodeListMsg map[string]interface{}
-	doConnectTempNodeList    []*commonModels.Node
-	doConnectTempNewNode     *commonModels.Node
+	doConnectTempNodeListMsg          map[string]interface{}
+	doConnectTempNodeList             []*commonModels.Node
+	doConnectTempNodeListWithDistance []map[string]interface{}
+	doConnectTempNewNode              *commonModels.Node
+
+	receiveMsgTempFoundPosition                   int
+	receiveMsgTempShareNeighborPackString         string
+	receiveMsgTempDistanceBetweenMeAndFindingNode []int64
+	receiveMsgTempTargetNodeNeighbor              []*commonModels.Node
 }
 
 // Build 节点通讯服务的初始化
 func (ncService *NodeConnectionService) Build(conf interface{}, myPublicChanel map[string]chan map[string]interface{}) *error.Error {
 	ncService.conf = conf
 	ncService.myPublicChanel = myPublicChanel
+	ncService.myNodeID = config.ParseNodeID(conf)
 
 	confNet := conf.(map[string]interface{})["net"]
 

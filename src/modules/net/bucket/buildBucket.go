@@ -26,9 +26,10 @@ type Bucket struct {
 	triedBucket     map[int][]*commonModels.Node
 
 	// 用来存桶里所有节点，之后方便拿出来用
-	nodeCacheLock     chan bool
-	nodeCache         []*commonModels.Node
-	maxNodeCacheCount int
+	nodeCacheLock         chan bool
+	nodeCache             []*commonModels.Node
+	nodeCacheWithDistance []map[string]interface{}
+	maxNodeCacheCount     int
 	// 缓存桶里的节点，用hashmap来存，高性能查询
 	nodeCacheHashMap map[string]bool
 
@@ -37,9 +38,10 @@ type Bucket struct {
 	maxSeedCount int
 
 	// 临时变量
-	bucketTempSeed        *commonModels.Node
-	bucketTempNodeList    []*commonModels.Node
-	bucketTempIsNodeExist bool
+	bucketTempSeed                 *commonModels.Node
+	bucketTempNodeList             []*commonModels.Node
+	bucketTempNodeListWithDistance []map[string]interface{}
+	bucketTempIsNodeExist          bool
 
 	// 自己的内部频道
 	myPrivateChanel map[string]chan map[string]interface{}
@@ -99,12 +101,25 @@ func (bucket *Bucket) CollectSeedFromConf() {
 	}
 }
 
+// AddSeedByGroup 批量添加种子结点
+func (bucket *Bucket) AddSeedByGroup(seeds []*commonModels.Node) *error.Error {
+	// logger.Debug(bucket.conf.(map[string]interface{})["number"].(string) + " adding seed length: " + strconv.Itoa(len(seeds)))
+	for i := 0; i < len(seeds); i++ {
+		bucket.AddSeed(seeds[i])
+	}
+	// logger.Debug(bucket.conf.(map[string]interface{})["number"].(string) + " seed length: " + strconv.Itoa(len(bucket.seed)))
+	// 清空一下，防止其他骚操作导致没被GC
+	seeds = nil
+	return nil
+}
+
 // AddSeed 添加一个节点到种子
 // 这里有可能是在初始化阶段就添加，也有可能在收到邻居信息的时候添加
 func (bucket *Bucket) AddSeed(node *commonModels.Node) *error.Error {
 	// 先检查桶里有没有这个节点
 	exist := bucket.IsNodeExist(node)
 	if exist {
+		// logger.Debug(bucket.conf.(map[string]interface{})["number"].(string) + " node exiss")
 		return nil
 	}
 
@@ -168,18 +183,24 @@ func (bucket *Bucket) AddNodeCache(n *commonModels.Node) *error.Error {
 	// 超长的话先删掉一个
 	if len(bucket.nodeCache) >= bucket.maxNodeCacheCount {
 		bucket.nodeCache = bucket.nodeCache[0 : len(bucket.nodeCache)-1]
+		bucket.nodeCacheWithDistance = bucket.nodeCacheWithDistance[0 : len(bucket.nodeCacheWithDistance)-1]
 	}
 
 	// 放入缓存就按照距离排序好
 	myNodeID := config.ParseNodeID(bucket.conf)
+	detailDistance := router.CalculateDetailDistance(myNodeID, n.GetNodeID())
 	// 为空直接放入
 	if len(bucket.nodeCache) == 0 {
 		bucket.nodeCache = append(bucket.nodeCache, n)
+		bucket.nodeCacheWithDistance = append(bucket.nodeCacheWithDistance, map[string]interface{}{
+			"node":           n,
+			"detailDistance": detailDistance,
+		})
 		bucket.nodeCacheHashMap[n.GetNodeID()] = true
 		<-bucket.nodeCacheLock
 		return nil
 	}
-	detailDistance := router.CalculateDetailDistance(myNodeID, n.GetNodeID())
+
 	for i := 0; i < len(bucket.nodeCache); i++ {
 		nodeDistance := router.CalculateDetailDistance(myNodeID, bucket.nodeCache[i].GetNodeID())
 		isInsert := false
@@ -196,12 +217,23 @@ func (bucket *Bucket) AddNodeCache(n *commonModels.Node) *error.Error {
 			// 插入排序
 			bigNodeIndex := i
 			newCache := []*commonModels.Node{n}
+			var newCacheWithDistance []map[string]interface{}
+			newCacheWithDistance = append(newCacheWithDistance, map[string]interface{}{
+				"node":           n,
+				"detailDistance": detailDistance,
+			})
+
 			if bigNodeIndex == 0 {
 				bucket.nodeCache = append(newCache, bucket.nodeCache...)
+				bucket.nodeCacheWithDistance = append(newCacheWithDistance, bucket.nodeCacheWithDistance...)
 			} else {
 				frontCache := bucket.nodeCache[0:bigNodeIndex]
 				afterCache := bucket.nodeCache[bigNodeIndex:]
 				bucket.nodeCache = append(frontCache, append(newCache, afterCache...)...)
+
+				frontCacheWithDistance := bucket.nodeCacheWithDistance[0:bigNodeIndex]
+				afterCacheWithDistance := bucket.nodeCacheWithDistance[bigNodeIndex:]
+				bucket.nodeCacheWithDistance = append(frontCacheWithDistance, append(newCacheWithDistance, afterCacheWithDistance...)...)
 			}
 
 			isInsert = true
@@ -211,6 +243,10 @@ func (bucket *Bucket) AddNodeCache(n *commonModels.Node) *error.Error {
 		// 如果比最后一位都要大，那么就直接放最后
 		if i == len(bucket.nodeCache)-1 && isInsert == false {
 			bucket.nodeCache = append(bucket.nodeCache, n)
+			bucket.nodeCacheWithDistance = append(bucket.nodeCacheWithDistance, map[string]interface{}{
+				"node":           n,
+				"detailDistance": detailDistance,
+			})
 			isInsert = true
 		}
 
@@ -239,6 +275,11 @@ func (bucket *Bucket) GetNodeList() []*commonModels.Node {
 	// return list
 
 	return bucket.nodeCache
+}
+
+// GetNodeListWithDistance 获取带距离的结点列表
+func (bucket *Bucket) GetNodeListWithDistance() []map[string]interface{} {
+	return bucket.nodeCacheWithDistance
 }
 
 // GetRandomNode 获得一个随机节点，给tcp服务进行连接尝试

@@ -41,6 +41,7 @@ func (cnfNet *CnfNet) HandleDiscoverMsgReceive(chanels map[string]chan map[strin
 		for {
 			udpData = <-chanels["receiveDiscoverMsgChanel"] // 发现服务的udp socket如果收不到消息，就会卡死这条协程。
 			targetChanel, exist = cnfNet.publicChanels[udpData["targetNodeID"].(string)]
+			// logger.Debug(udpData)
 			// logger.Debug(udpData["targetNodeID"].(string) + " receive")
 			if exist {
 				targetChanel.(map[string]chan map[string]interface{})["receiveDiscoverMsgChanel"] <- udpData
@@ -154,6 +155,8 @@ func (cnfNet *CnfNet) HandleSubNodeSendNodeConnectionMsg(chanels map[string]chan
 							"tcpData":      tcpData,
 							"localMessage": true,
 						}
+
+						continue
 					}
 
 					// 非本地节点，使用socket发送数据报文

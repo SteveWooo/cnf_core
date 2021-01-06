@@ -28,17 +28,17 @@ func (bucket *Bucket) RunService(chanels map[string]chan map[string]interface{})
 	for {
 		timer.Sleep(100 + rand.Intn(100))
 
-		bucket.myPrivateChanel["bucketOperateChanel"] <- pushBucketSeedEventMap
-
-		bucket.myPrivateChanel["bucketOperateChanel"] <- pushNodeListChanelEventMap
-
 		if seedLoop == 0 {
 			bucket.myPrivateChanel["bucketOperateChanel"] <- collectSeedFromConfEventMap
 		}
 		seedLoop++
-		if seedLoop >= 10 {
+		if seedLoop >= 100 {
 			seedLoop = 0
 		}
+
+		bucket.myPrivateChanel["bucketOperateChanel"] <- pushBucketSeedEventMap
+
+		bucket.myPrivateChanel["bucketOperateChanel"] <- pushNodeListChanelEventMap
 	}
 }
 
@@ -52,6 +52,11 @@ func (bucket *Bucket) HandleBucketOperate() {
 			bucket.AddNewNode(bucketOperate["node"].(*commonModels.Node))
 		}
 
+		// 批量添加种子结点
+		if bucketOperate["event"] == "addSeedByGroup" {
+			bucket.AddSeedByGroup(bucketOperate["seeds"].([]*commonModels.Node))
+		}
+
 		if bucketOperate["event"] == "pushBucketSeed" {
 			bucket.HandleBucketSeed()
 		}
@@ -62,9 +67,9 @@ func (bucket *Bucket) HandleBucketOperate() {
 
 		if bucketOperate["event"] == "collectSeedFromConf" {
 			// 桶里如果没有东西，就要找种子源了
-			if len(bucket.nodeCache) != 0 {
-				continue
-			}
+			// if len(bucket.nodeCache) != 0 {
+			// 	continue
+			// }
 			bucket.CollectSeedFromConf()
 		}
 	}
@@ -88,6 +93,8 @@ func (bucket *Bucket) HandleBucketSeed() {
 		// logger.Debug(bucket.conf.(map[string]interface{})["number"].(string) + " newNode is exists")
 		return
 	}
+
+	// logger.Debug(bucket.conf.(map[string]interface{})["number"].(string) + " push seed")
 	bucket.myPrivateChanel["bucketSeedChanel"] <- map[string]interface{}{
 		"node": bucket.bucketTempSeed,
 	}
@@ -101,10 +108,12 @@ func (bucket *Bucket) HandleBucketNodeList() {
 	}
 
 	bucket.bucketTempNodeList = bucket.GetNodeList()
-	if len(bucket.bucketTempNodeList) == 0 {
+	bucket.bucketTempNodeListWithDistance = bucket.GetNodeListWithDistance()
+	if len(bucket.bucketTempNodeListWithDistance) == 0 {
 		return
 	}
 	bucket.myPrivateChanel["bucketNodeListChanel"] <- map[string]interface{}{
-		"nodeList": bucket.bucketTempNodeList,
+		"nodeList":             bucket.bucketTempNodeList,
+		"nodeListWithDistance": bucket.bucketTempNodeListWithDistance,
 	}
 }

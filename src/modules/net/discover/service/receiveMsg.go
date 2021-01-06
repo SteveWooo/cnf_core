@@ -233,10 +233,11 @@ func (discoverService *DiscoverService) ParseUDPData(udpData map[string]interfac
 	signature := body.(map[string]interface{})["signature"]
 	rcid, _ := strconv.Atoi(body.(map[string]interface{})["recid"].(string))
 
-	// 获取nodeId
+	// 1、通过恢复公钥的方式获取nodeId
 	recoverPublicKey, recoverErr := sign.Recover(signature.(string), messageHash, uint64(rcid))
-	body.(map[string]interface{})["senderNodeID"] = recoverPublicKey
-	// logger.Debug(body.(map[string]interface{})["senderNodeID"])
+	body.(map[string]interface{})["senderPublicKey"] = recoverPublicKey
+	// body.(map[string]interface{})["senderNodeID"] = recoverPublicKey
+
 	if recoverErr != nil {
 		return nil, error.New(map[string]interface{}{
 			"message": "接收到不合法的msg内容，无法解析NodeID",
@@ -262,9 +263,9 @@ func (discoverService *DiscoverService) ParseUDPData(udpData map[string]interfac
 	data["targetNodeID"] = body.(map[string]interface{})["targetNodeID"]
 	delete(body.(map[string]interface{}), "targetNodeID")
 
-	if data["targetNodeID"] == "" || len(data["targetNodeID"].(string)) != 130 {
+	if data["targetNodeID"] == "" || len(data["targetNodeID"].(string)) != 34 {
 		return nil, error.New(map[string]interface{}{
-			"message":   "接收到不合法的msg内容",
+			"message":   "接收到不合法的msg内容，targetNodeID不合法",
 			"originErr": msgJSONUnMarshalErr,
 		})
 	}

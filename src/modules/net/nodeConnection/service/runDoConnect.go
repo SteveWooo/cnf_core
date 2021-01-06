@@ -15,34 +15,52 @@ import (
 // RunFindConnection 主动找可用节点
 func (ncService *NodeConnectionService) RunFindConnection(chanels map[string]chan map[string]interface{}) {
 	DoFindConnectionByNodeListEventMap := make(map[string]interface{})
-	DoFindConnectionByNodeListEventMap["event"] = "DoFindConnectionByNodeList"
+	DoFindConnectionByNodeListEventMap["event"] = "doFindConnectionByNodeList"
 
 	DoFindNeighborEventMap := make(map[string]interface{})
-	DoFindNeighborEventMap["event"] = "DoFindNeighbor"
+	DoFindNeighborEventMap["event"] = "doFindNeighbor"
+
+	DoMonitorEventMap := make(map[string]interface{})
+	DoMonitorEventMap["event"] = "doMonitor"
 
 	doFindConnLoop := 0
+	doFindNeighborLoop := 0
 	for {
 		timer.Sleep(100 + rand.Intn(100))
 
 		if doFindConnLoop == 0 {
 			ncService.myPrivateChanel["nodeConnectionEventChanel"] <- DoFindConnectionByNodeListEventMap
-			ncService.myPrivateChanel["nodeConnectionEventChanel"] <- DoFindNeighborEventMap
+			ncService.myPrivateChanel["nodeConnectionEventChanel"] <- DoMonitorEventMap
 		}
 		doFindConnLoop++
-		if doFindConnLoop == 20 {
+		if doFindConnLoop == 5 {
 			doFindConnLoop = 0
+		}
+
+		if doFindNeighborLoop == 0 {
+			ncService.myPrivateChanel["nodeConnectionEventChanel"] <- DoFindNeighborEventMap
+		}
+		doFindNeighborLoop++
+		if doFindNeighborLoop == 20 {
+			doFindNeighborLoop = 0
 		}
 	}
 }
 
 // DoFindNeighbor 主动向周围的节点发起寻找邻居请求
 func (ncService *NodeConnectionService) DoFindNeighbor() {
+	// 广播所有节点，发起邻居搜索请求
 	var findNeighborPackString string
 	for i := 0; i < len(ncService.inBoundConn); i++ {
-		if ncService.inBoundConn[i] == nil {
+		if ncService.inBoundConn[i] == nil || ncService.inBoundConn[i].IsShaked() == false {
 			continue
 		}
-		findNeighborPackString = ncService.GetFindNodePackString(ncService.inBoundConn[i].GetNodeID(), config.ParseNodeID(ncService.conf))
+		if len(ncService.myPublicChanel["sendNodeConnectionMsgChanel"]) == cap(ncService.myPublicChanel["sendNodeConnectionMsgChanel"]) {
+			continue
+		}
+
+		findNeighborPackString = ncService.GetFindNodePackString(config.ParseNodeID(ncService.conf), ncService.inBoundConn[i].GetNodeID())
+
 		ncService.myPublicChanel["sendNodeConnectionMsgChanel"] <- map[string]interface{}{
 			"nodeConn": ncService.inBoundConn[i],
 			"message":  findNeighborPackString,
@@ -50,16 +68,20 @@ func (ncService *NodeConnectionService) DoFindNeighbor() {
 	}
 
 	for i := 0; i < len(ncService.outBoundConn); i++ {
-		if ncService.outBoundConn[i] == nil {
+		if ncService.outBoundConn[i] == nil || ncService.outBoundConn[i].IsShaked() == false {
 			continue
 		}
-		findNeighborPackString = ncService.GetFindNodePackString(ncService.outBoundConn[i].GetNodeID(), config.ParseNodeID(ncService.conf))
+		if len(ncService.myPublicChanel["sendNodeConnectionMsgChanel"]) == cap(ncService.myPublicChanel["sendNodeConnectionMsgChanel"]) {
+			continue
+		}
+
+		findNeighborPackString = ncService.GetFindNodePackString(config.ParseNodeID(ncService.conf), ncService.outBoundConn[i].GetNodeID())
+
 		ncService.myPublicChanel["sendNodeConnectionMsgChanel"] <- map[string]interface{}{
 			"nodeConn": ncService.outBoundConn[i],
 			"message":  findNeighborPackString,
 		}
 	}
-
 }
 
 // DoFindConnectionByNodeList 主动找可用节点

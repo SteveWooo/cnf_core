@@ -27,7 +27,7 @@ func main() {
 	myIP := GetIP()
 	// myIP := "192.168.10.200"
 
-	COUNT := 10
+	COUNT := 1000
 	// 同一个端口，才用同一套公共频道
 	publicChanels := make(map[string]interface{})
 	cnfObj := make([]*cnf.Cnf, COUNT)

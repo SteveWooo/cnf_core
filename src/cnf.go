@@ -25,6 +25,7 @@ func (cnf *Cnf) Build(conf interface{}) {
 	confNet := conf.(map[string]interface{})["net"]
 	if confNet.(map[string]interface{})["publicKey"] == nil {
 		confNet.(map[string]interface{})["publicKey"] = sign.GetPublicKey(confNet.(map[string]interface{})["localPrivateKey"].(string))
+		confNet.(map[string]interface{})["nodeID"] = confNet.(map[string]interface{})["publicKey"].(string)[0:34]
 		conf.(map[string]interface{})["net"] = confNet
 	}
 

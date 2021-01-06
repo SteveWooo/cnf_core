@@ -7,7 +7,6 @@ import (
 	filepath "path/filepath"
 
 	error "github.com/cnf_core/src/utils/error"
-	"github.com/cnf_core/src/utils/logger"
 )
 
 var config interface{}
@@ -41,7 +40,7 @@ func loadConfig(configFilePath string) (interface{}, interface{}) {
 		configFilePath = filepath.Clean(executableDir) + filepath.Clean("/") + filepath.Clean(configFilePath)
 	}
 
-	logger.Debug(configFilePath)
+	// logger.Debug(configFilePath)
 
 	// 然后利用配置文件路径, 读取配置文件出来
 	configFile, _ := ioutil.ReadFile(configFilePath)
@@ -98,8 +97,12 @@ func SetConfig(conf interface{}) {
 // ParseNodeID 从配置对象中解析出NodeID来
 // @param conf interface{} 配置文件
 func ParseNodeID(conf interface{}) string {
-	confNet := conf.(map[string]interface{})["net"]
-	// nodeID := sign.GetPublicKey(confNet.(map[string]interface{})["localPrivateKey"].(string))
-	nodeID := confNet.(map[string]interface{})["publicKey"].(string)
-	return nodeID
+	// 签名的
+	// return sign.GetPublicKey(confNet.(map[string]interface{})["localPrivateKey"].(string))
+
+	// 直接拿公钥的
+	// return conf.(map[string]interface{})["net"].(map[string]interface{})["publicKey"].(string)
+
+	// 统一以太坊的sha3的NodeID，也就是拿前32位出来（256位二进制）
+	return conf.(map[string]interface{})["net"].(map[string]interface{})["nodeID"].(string)
 }

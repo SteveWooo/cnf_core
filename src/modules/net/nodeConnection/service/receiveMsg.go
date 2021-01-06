@@ -5,16 +5,16 @@ import (
 	"encoding/json"
 	"strings"
 
+	commonModels "github.com/cnf_core/src/modules/net/common/models"
 	nodeConnectionModels "github.com/cnf_core/src/modules/net/nodeConnection/models"
 	"github.com/cnf_core/src/utils/config"
 	"github.com/cnf_core/src/utils/error"
 	"github.com/cnf_core/src/utils/logger"
+	"github.com/cnf_core/src/utils/router"
 )
 
 // ReceiveMsg 处理接收nodeConnetion消息，这里主要做分流
 func (ncService *NodeConnectionService) ReceiveMsg(data interface{}) (interface{}, *error.Error) {
-	logger.Debug(data.(map[string]interface{})["tcpData"])
-
 	// 收到握手请求时，因为很有可能接收方没有一个连接对象。
 	if data.(map[string]interface{})["tcpData"].(map[string]interface{})["event"] == "shakeEvent" {
 		// logger.Debug(config.ParseNodeID(ncService.conf) + " get shaked")
@@ -27,8 +27,51 @@ func (ncService *NodeConnectionService) ReceiveMsg(data interface{}) (interface{
 	}
 
 	if data.(map[string]interface{})["tcpData"].(map[string]interface{})["event"] == "findNode" {
-		// logger.Debug("getDestroy")
 		return ncService.HandleFindNode(data)
+	}
+
+	if data.(map[string]interface{})["tcpData"].(map[string]interface{})["event"] == "shareNodeNeighbor" {
+		return ncService.HandleShareNodeNeighbor(data)
+	}
+
+	return nil, nil
+}
+
+// HandleShareNodeNeighbor 处理邻居节点寻找的请求
+func (ncService *NodeConnectionService) HandleShareNodeNeighbor(data interface{}) (interface{}, *error.Error) {
+	if data.(map[string]interface{})["tcpData"].(map[string]interface{})["msgJSON"] == nil || data.(map[string]interface{})["tcpData"].(map[string]interface{})["msgJSON"].(map[string]interface{})["nodeNeighbor"] == nil {
+		return nil, nil
+	}
+
+	if len(ncService.myPrivateChanel["bucketOperateChanel"]) == cap(ncService.myPrivateChanel["bucketOperateChanel"]) {
+		return nil, nil
+	}
+
+	nodeNeighbors := data.(map[string]interface{})["tcpData"].(map[string]interface{})["msgJSON"].(map[string]interface{})["nodeNeighbor"].([]interface{})
+	var seeds []*commonModels.Node = nil
+	// 循环创建新的结点变量。这个结点要直接存到bucket里面的，不能搞全局
+	for i := 0; i < len(nodeNeighbors); i++ {
+		// 不要添加自己到种子里面
+		if ncService.myNodeID == nodeNeighbors[i].(map[string]interface{})["nodeID"].(string) {
+			continue
+		}
+		node, _ := commonModels.CreateNode(map[string]interface{}{
+			"ip":          nodeNeighbors[i].(map[string]interface{})["ip"].(string),
+			"nodeID":      nodeNeighbors[i].(map[string]interface{})["nodeID"].(string),
+			"servicePort": nodeNeighbors[i].(map[string]interface{})["servicePort"].(string),
+		})
+		seeds = append(seeds, node)
+	}
+
+	// logger.Debug(ncService.conf.(map[string]interface{})["number"].(string) + " get seeds length : " + strconv.Itoa(len(seeds)))
+
+	if len(seeds) == 0 {
+		return nil, nil
+	}
+
+	ncService.myPrivateChanel["bucketOperateChanel"] <- map[string]interface{}{
+		"event": "addSeedByGroup",
+		"seeds": seeds,
 	}
 
 	return nil, nil
@@ -36,7 +79,99 @@ func (ncService *NodeConnectionService) ReceiveMsg(data interface{}) (interface{
 
 // HandleFindNode 处理邻居节点寻找的请求
 func (ncService *NodeConnectionService) HandleFindNode(data interface{}) (interface{}, *error.Error) {
-	// TODO
+	// 桶里没有数据就退出，不然会卡住这条协程
+	if len(ncService.myPrivateChanel["bucketNodeListChanel"]) == 0 {
+		return nil, nil
+	}
+
+	// 和隔壁doConn共用一个变量，因为处于同一个消息队列中，所以不用担心并发问题
+	ncService.doConnectTempNodeListMsg = <-ncService.myPrivateChanel["bucketNodeListChanel"]
+	ncService.doConnectTempNodeList = ncService.doConnectTempNodeListMsg["nodeList"].([]*commonModels.Node)
+	ncService.doConnectTempNodeListWithDistance = ncService.doConnectTempNodeListMsg["nodeListWithDistance"].([]map[string]interface{})
+
+	// var targetNodeNeighbor []*commonModels.Node
+	ncService.receiveMsgTempTargetNodeNeighbor = nil
+	ncService.receiveMsgTempTargetNodeNeighbor = make([](*commonModels.Node), 0)
+
+	// 1、先计算出本机节点和需要找的节点之间的距离
+	if data.(map[string]interface{})["tcpData"].(map[string]interface{})["msgJSON"] == nil || data.(map[string]interface{})["tcpData"].(map[string]interface{})["msgJSON"].(map[string]interface{})["findingNodeID"] == nil {
+		logger.Debug("findNode事件tcp数据包不完整")
+		return nil, nil
+	}
+	ncService.receiveMsgTempDistanceBetweenMeAndFindingNode = router.CalculateDetailDistance(ncService.myNodeID,
+		data.(map[string]interface{})["tcpData"].(map[string]interface{})["msgJSON"].(map[string]interface{})["findingNodeID"].(string))
+
+	// 2、然后找到这个结点的距离，在我本地的结点缓存列表中排在哪里，然后取出附近的3个结点
+	ncService.receiveMsgTempFoundPosition = -1
+	for i := 0; i < len(ncService.doConnectTempNodeListWithDistance); i++ {
+		subNodeDistance := ncService.doConnectTempNodeListWithDistance[i]["detailDistance"].([]int64) // hardCode
+		for k := 0; k < len(subNodeDistance); k++ {
+			if ncService.receiveMsgTempDistanceBetweenMeAndFindingNode[k] == subNodeDistance[k] {
+				continue
+			}
+
+			if ncService.receiveMsgTempDistanceBetweenMeAndFindingNode[k] > subNodeDistance[k] {
+				break
+			}
+
+			// 取i附近的几个邻居出来
+			ncService.receiveMsgTempFoundPosition = i
+			break
+
+		}
+
+		// 如果这个结点就是队里最大的，就直接把foundPosition设置到最后一位
+		if i == len(ncService.doConnectTempNodeListWithDistance)-1 && ncService.receiveMsgTempFoundPosition == -1 {
+			ncService.receiveMsgTempFoundPosition = i
+			break
+		}
+
+		if ncService.receiveMsgTempFoundPosition != -1 {
+			break
+		}
+	}
+
+	// 没有邻居
+	if ncService.receiveMsgTempFoundPosition == -1 {
+		return nil, nil
+	}
+
+	// 一个一个加进来
+	ncService.receiveMsgTempTargetNodeNeighbor = append(ncService.receiveMsgTempTargetNodeNeighbor, ncService.doConnectTempNodeListWithDistance[ncService.receiveMsgTempFoundPosition]["node"].(*commonModels.Node))
+	if ncService.receiveMsgTempFoundPosition-1 >= 0 {
+		ncService.receiveMsgTempTargetNodeNeighbor = append(ncService.receiveMsgTempTargetNodeNeighbor, ncService.doConnectTempNodeListWithDistance[ncService.receiveMsgTempFoundPosition-1]["node"].(*commonModels.Node))
+	}
+	if ncService.receiveMsgTempFoundPosition+1 < len(ncService.doConnectTempNodeListWithDistance) {
+		ncService.receiveMsgTempTargetNodeNeighbor = append(ncService.receiveMsgTempTargetNodeNeighbor, ncService.doConnectTempNodeListWithDistance[ncService.receiveMsgTempFoundPosition+1]["node"].(*commonModels.Node))
+	}
+	// if ncService.receiveMsgTempFoundPosition-2 >= 0 {
+	// 	ncService.receiveMsgTempTargetNodeNeighbor = append(ncService.receiveMsgTempTargetNodeNeighbor, ncService.doConnectTempNodeListWithDistance[ncService.receiveMsgTempFoundPosition-2]["node"].(*commonModels.Node))
+	// }
+	// if ncService.receiveMsgTempFoundPosition+2 < len(ncService.doConnectTempNodeListWithDistance) {
+	// 	ncService.receiveMsgTempTargetNodeNeighbor = append(ncService.receiveMsgTempTargetNodeNeighbor, ncService.doConnectTempNodeListWithDistance[ncService.receiveMsgTempFoundPosition+2]["node"].(*commonModels.Node))
+	// }
+
+	// logger.Debug(ncService.conf.(map[string]interface{})["number"].(string) + " get data")
+	// logger.Debug(data)
+	ncService.receiveMsgTempShareNeighborPackString = ncService.GetshareNodeNeighborPackString(ncService.receiveMsgTempTargetNodeNeighbor, data.(map[string]interface{})["tcpData"].(map[string]interface{})["nodeID"].(string))
+	// 说明构建失败
+	if ncService.receiveMsgTempShareNeighborPackString == "" {
+		logger.Error("邻居分享失败")
+		return nil, nil
+	}
+
+	if data.(map[string]interface{})["nodeConn"] == nil {
+		ncService.myPublicChanel["sendNodeConnectionMsgChanel"] <- map[string]interface{}{
+			"nodeConn": nil,
+			"message":  ncService.receiveMsgTempShareNeighborPackString,
+		}
+	} else {
+		ncService.myPublicChanel["sendNodeConnectionMsgChanel"] <- map[string]interface{}{
+			"nodeConn": data.(map[string]interface{})["nodeConn"].(*nodeConnectionModels.NodeConn),
+			"message":  ncService.receiveMsgTempShareNeighborPackString,
+		}
+	}
+
 	return nil, nil
 }
 
@@ -111,7 +246,16 @@ func (ncService *NodeConnectionService) HandleShakeEvent(data interface{}) (inte
 		newNodeConn.SetTargetNodeID(config.ParseNodeID(ncService.conf))
 
 		// 然后把这个新的nodeConn加入到自己的inBound里面
-		ncService.AddInBoundConn(&newNodeConn)
+		addInboundErr := ncService.AddInBoundConn(&newNodeConn)
+		if addInboundErr != nil {
+			// inBound如果满了，也要告诉对方断开连接
+			shakeDestroyString := ncService.GetShakePackString("shakeDestroyEvent", remoteNodeID)
+			ncService.myPublicChanel["sendNodeConnectionMsgChanel"] <- map[string]interface{}{
+				"nodeConn": &newNodeConn,
+				"message":  shakeDestroyString,
+			}
+			return nil, nil
+		}
 
 		// 单点shaker。收到shake就直接set，而另一方发起doTryOutbound的时候，就已经当作shaked了
 		newNodeConn.SetShaker(data)

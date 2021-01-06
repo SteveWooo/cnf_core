@@ -91,7 +91,7 @@ func (cnfNet *CnfNet) doRun() interface{} {
 	// 非master节点都能用到
 	cnfNet.myPrivateChanel["bucketSeedChanel"] = make(chan map[string]interface{}, 1)     // bucket服务往这个通道输送邻居节点、种子，给doDiscover服务用
 	cnfNet.myPrivateChanel["bucketNodeChanel"] = make(chan map[string]interface{}, 1)     // bucket服务往这个通道输送可用节点，给tcp服务尝试连接。
-	cnfNet.myPrivateChanel["bucketNodeListChanel"] = make(chan map[string]interface{}, 1) // bucket服务对外输出整个缓存列表
+	cnfNet.myPrivateChanel["bucketNodeListChanel"] = make(chan map[string]interface{}, 4) // bucket服务对外输出整个缓存列表，由于findNeighbor和doConn都需要用到这个，缓存稍微多几个
 
 	// 给发现服务上任务队列的chanel
 	cnfNet.myPrivateChanel["discoverEventChanel"] = make(chan map[string]interface{}, 10)       // 发现服务的消息队列

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net"
 
+	"github.com/cnf_core/src/utils/config"
 	"github.com/cnf_core/src/utils/error"
 	"github.com/cnf_core/src/utils/logger"
 	"github.com/cnf_core/src/utils/sign"
@@ -72,13 +73,13 @@ func (discoverService *DiscoverService) Send(message string, targetIP string, ta
 
 		udpData, parseUDPError := discoverService.ParseUDPData(udpSourceData)
 		if parseUDPError != nil {
+			logger.Debug(parseUDPError)
 			return parseUDPError
 		}
 
 		// 把消息推送到消息队列中。只有队列不满的情况下，这条协程才会往下走
 		// logger.Debug(udpData)
 		discoverService.myPrivateChanel["receiveDiscoverMsgChanel"] <- udpData.(map[string]interface{})
-		// logger.Debug("零拷贝")
 
 		return nil
 	}
@@ -151,6 +152,7 @@ func (discoverService *DiscoverService) BuildPackageBody(packType string, nodeID
 		"msg":          msg,
 		"recid":        recid,
 		"signature":    signature,
+		"senderNodeID": config.ParseNodeID(discoverService.conf),
 		"targetNodeID": nodeID,
 	}
 
