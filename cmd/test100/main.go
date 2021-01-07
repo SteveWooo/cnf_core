@@ -31,10 +31,11 @@ func main() {
 	myIP := GetIP()
 	// myIP := "192.168.10.200"
 
-	// 用一个大JSON来存配置
-	configJSONArray, _ := config.LoadByPath("../config/conf." + myIP + ".json")
-
 	COUNT, _ := strconv.Atoi(config.GetArg("nodeCount"))
+
+	// 用一个大JSON来存配置
+	configJSONArray, _ := config.LoadByPath("../config/conf." + myIP + "-" + strconv.Itoa(COUNT) + ".json")
+
 	// 同一个端口，才用同一套公共频道
 	publicChanels := make(map[string]interface{})
 	cnfObj := make([]*cnf.Cnf, COUNT)

@@ -40,7 +40,7 @@ func (discoverService *DiscoverService) RunDoDiscover(chanels map[string]chan ma
 		}
 
 		doFindNeighborLoop++
-		if doFindNeighborLoop >= 20 {
+		if doFindNeighborLoop >= 10 {
 			doFindNeighborLoop = 0
 			discoverService.myPrivateChanel["discoverEventChanel"] <- doFindNeighborEventMap
 		}
@@ -53,19 +53,19 @@ func (discoverService *DiscoverService) doFindNeighbor(findingNodeID string) {
 	if len(discoverService.myPrivateChanel["bucketNodeListChanel"]) == 0 {
 		return
 	}
-	nodeCacheListMsg := <-discoverService.myPrivateChanel["bucketNodeListChanel"]
-	nodeCacheList := nodeCacheListMsg["nodeList"].([]*commonModels.Node)
+	discoverService.doFindNeighborNodeCacheListMsg = <-discoverService.myPrivateChanel["bucketNodeListChanel"]
+	discoverService.doFindNeighborNodeCacheList = discoverService.doFindNeighborNodeCacheListMsg["nodeList"].([]*commonModels.Node)
 
 	var findNeighborPackString string
-	for i := 0; i < len(nodeCacheList); i++ {
+	for i := 0; i < len(discoverService.doFindNeighborNodeCacheList); i++ {
 		if len(discoverService.myPublicChanel["sendDiscoverMsgChanel"]) == cap(discoverService.myPublicChanel["sendDiscoverMsgChanel"]) {
 			continue
 		}
 
 		// 找上面配置好的结点
-		findNeighborPackString = discoverService.GetFindNodePackString(findingNodeID, nodeCacheList[i].GetNodeID())
+		findNeighborPackString = discoverService.GetFindNodePackString(findingNodeID, discoverService.doFindNeighborNodeCacheList[i].GetNodeID())
 
-		discoverService.DoSend(findNeighborPackString, nodeCacheList[i].GetIP(), nodeCacheList[i].GetServicePort())
+		discoverService.DoSend(findNeighborPackString, discoverService.doFindNeighborNodeCacheList[i].GetIP(), discoverService.doFindNeighborNodeCacheList[i].GetServicePort())
 	}
 }
 
@@ -117,13 +117,15 @@ func (discoverService *DiscoverService) processDoingPingCache(chanels map[string
 	discoverService.runDoDiscoverTempNow = timer.Now()
 	for discoverService.runDoDiscoverTempProcessCacheNodeID, discoverService.runDoDiscoverTempProcessCacheCache = range discoverService.pingPongCache {
 		// 不能太快，不然网络卡一卡就卡没了
+		if discoverService.runDoDiscoverTempProcessCacheCache == nil {
+			continue
+		}
 		if discoverService.runDoDiscoverTempNow-discoverService.runDoDiscoverTempProcessCacheCache.GetTs() >= 30000 && discoverService.runDoDiscoverTempProcessCacheCache.GetDoingPing() == true {
-			// 重发Ping
-			// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " 11")
-			discoverService.DoPing(discoverService.runDoDiscoverTempProcessCacheCache.GetIP(),
-				discoverService.runDoDiscoverTempProcessCacheCache.GetServicePort(),
-				discoverService.runDoDiscoverTempProcessCacheCache.GetNodeID())
-			// discoverService.pingPongCache[discoverService.runDoDiscoverTempProcessCacheNodeID] = nil
+			// 重发Ping，或者删掉它不管了
+			// discoverService.DoPing(discoverService.runDoDiscoverTempProcessCacheCache.GetIP(),
+			// 	discoverService.runDoDiscoverTempProcessCacheCache.GetServicePort(),
+			// 	discoverService.runDoDiscoverTempProcessCacheCache.GetNodeID())
+			discoverService.pingPongCache[discoverService.runDoDiscoverTempProcessCacheNodeID] = nil
 		}
 
 	}

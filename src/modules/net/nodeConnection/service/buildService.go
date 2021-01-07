@@ -10,7 +10,7 @@ import (
 	"github.com/cnf_core/src/utils/router"
 )
 
-var INBOUND_CONN_MAX int = 200
+var INBOUND_CONN_MAX int = 1000
 var OUTBOUND_CONN_MAX int = 8
 
 // NodeConnectionService 节点连接服务的tcp handle
@@ -280,7 +280,7 @@ func (ncService *NodeConnectionService) AddMasterInBoundConn(nodeConn *nodeConne
 	}
 	if isFull {
 		return error.New(map[string]interface{}{
-			"message": "outbound 连接数已满",
+			"message": "masterinbound 连接数已满",
 		})
 	}
 	return nil

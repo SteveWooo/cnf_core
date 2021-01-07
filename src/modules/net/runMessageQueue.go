@@ -119,8 +119,9 @@ func (cnfNet *CnfNet) HandleSubNodeSubmitNodeConnectionCreate(chanels map[string
 // HandleSubNodeReceiveNodeConnectionCreate 子节点成功获取新创建的nodeConn入口
 func (cnfNet *CnfNet) HandleSubNodeReceiveNodeConnectionCreate(chanels map[string]chan map[string]interface{}) {
 	myNodeID := config.ParseNodeID(cnfNet.conf)
+	var nodeConnectionCreateResp map[string]interface{}
 	for {
-		nodeConnectionCreateResp := <-cnfNet.publicChanels[myNodeID].(map[string]chan map[string]interface{})["receiveNodeConnectionCreateChanel"]
+		nodeConnectionCreateResp = <-cnfNet.publicChanels[myNodeID].(map[string]chan map[string]interface{})["receiveNodeConnectionCreateChanel"]
 		// 子节点收到创建nodeConn成功消息后，走子节点的创建成功逻辑即可。
 		if nodeConnectionCreateResp["connType"] == "outBound" {
 			go cnfNet.nodeConnection.SalveHandleNodeOutBoundConnectionCreateEvent(nodeConnectionCreateResp)

@@ -20,6 +20,7 @@ var TRIED_BUCKET_LENGTH int = 16
 // Bucket 路由桶
 type Bucket struct {
 	conf            interface{}
+	myNodeID        string
 	newBucketLock   chan bool
 	newBucket       map[int][]*commonModels.Node
 	triedBucketLock chan bool
@@ -50,6 +51,7 @@ type Bucket struct {
 // Build 初始化路由桶
 func (bucket *Bucket) Build(conf interface{}) {
 	bucket.conf = conf
+	bucket.myNodeID = config.ParseNodeID(conf)
 	// bucket.newBucket = make(map[int][]*commonModels.Node) // 初始化数组对象本身
 	// for i := 0; i <= NEW_BUCKET_COUNT; i++ {
 	// 	bucket.newBucket[i] = make([]*commonModels.Node, NEW_BUCKET_LENGTH+1) // 声明第一个维度每个对象都是一个子数组
@@ -187,8 +189,7 @@ func (bucket *Bucket) AddNodeCache(n *commonModels.Node) *error.Error {
 	}
 
 	// 放入缓存就按照距离排序好
-	myNodeID := config.ParseNodeID(bucket.conf)
-	detailDistance := router.CalculateDetailDistance(myNodeID, n.GetNodeID())
+	detailDistance := router.CalculateDetailDistance(bucket.myNodeID, n.GetNodeID())
 	// 为空直接放入
 	if len(bucket.nodeCache) == 0 {
 		bucket.nodeCache = append(bucket.nodeCache, n)
@@ -202,7 +203,7 @@ func (bucket *Bucket) AddNodeCache(n *commonModels.Node) *error.Error {
 	}
 
 	for i := 0; i < len(bucket.nodeCache); i++ {
-		nodeDistance := router.CalculateDetailDistance(myNodeID, bucket.nodeCache[i].GetNodeID())
+		nodeDistance := router.CalculateDetailDistance(bucket.myNodeID, bucket.nodeCache[i].GetNodeID())
 		isInsert := false
 		for k := 0; k < len(detailDistance); k++ {
 			// 距离远就放后面

@@ -34,13 +34,13 @@ func (discoverService *DiscoverService) HandleFindNode(data interface{}) (interf
 	// 2、然后找到这个结点的距离，在我本地的结点缓存列表中排在哪里，然后取出附近的3个结点
 	discoverService.receiveMsgTempFoundPosition = -1
 	for i := 0; i < len(discoverService.receiveMsgTempNodeListWithDistance); i++ {
-		subNodeDistance := discoverService.receiveMsgTempNodeListWithDistance[i]["detailDistance"].([]int64) // hardCode
-		for k := 0; k < len(subNodeDistance); k++ {
-			if discoverService.receiveMsgTempDistanceBetweenMeAndFindingNode[k] == subNodeDistance[k] {
+		discoverService.receiveNeighborMsgSubNodeDistance = discoverService.receiveMsgTempNodeListWithDistance[i]["detailDistance"].([]int64) // hardCode
+		for k := 0; k < len(discoverService.receiveNeighborMsgSubNodeDistance); k++ {
+			if discoverService.receiveMsgTempDistanceBetweenMeAndFindingNode[k] == discoverService.receiveNeighborMsgSubNodeDistance[k] {
 				continue
 			}
 
-			if discoverService.receiveMsgTempDistanceBetweenMeAndFindingNode[k] > subNodeDistance[k] {
+			if discoverService.receiveMsgTempDistanceBetweenMeAndFindingNode[k] > discoverService.receiveNeighborMsgSubNodeDistance[k] {
 				break
 			}
 
@@ -68,17 +68,17 @@ func (discoverService *DiscoverService) HandleFindNode(data interface{}) (interf
 
 	// 一个一个加进来
 	discoverService.receiveMsgTempTargetNodeNeighbor = append(discoverService.receiveMsgTempTargetNodeNeighbor, discoverService.receiveMsgTempNodeListWithDistance[discoverService.receiveMsgTempFoundPosition]["node"].(*commonModels.Node))
-	if discoverService.receiveMsgTempFoundPosition-1 >= 0 {
-		discoverService.receiveMsgTempTargetNodeNeighbor = append(discoverService.receiveMsgTempTargetNodeNeighbor, discoverService.receiveMsgTempNodeListWithDistance[discoverService.receiveMsgTempFoundPosition-1]["node"].(*commonModels.Node))
-	}
 	if discoverService.receiveMsgTempFoundPosition+1 < len(discoverService.receiveMsgTempNodeListWithDistance) {
 		discoverService.receiveMsgTempTargetNodeNeighbor = append(discoverService.receiveMsgTempTargetNodeNeighbor, discoverService.receiveMsgTempNodeListWithDistance[discoverService.receiveMsgTempFoundPosition+1]["node"].(*commonModels.Node))
 	}
-	// if discoverService.receiveMsgTempFoundPosition-2 >= 0 {
-	// 	discoverService.receiveMsgTempTargetNodeNeighbor = append(discoverService.receiveMsgTempTargetNodeNeighbor, discoverService.receiveMsgTempNodeListWithDistance[discoverService.receiveMsgTempFoundPosition-2]["node"].(*commonModels.Node))
+	// if discoverService.receiveMsgTempFoundPosition-1 >= 0 {
+	// 	discoverService.receiveMsgTempTargetNodeNeighbor = append(discoverService.receiveMsgTempTargetNodeNeighbor, discoverService.receiveMsgTempNodeListWithDistance[discoverService.receiveMsgTempFoundPosition-1]["node"].(*commonModels.Node))
 	// }
 	// if discoverService.receiveMsgTempFoundPosition+2 < len(discoverService.receiveMsgTempNodeListWithDistance) {
 	// 	discoverService.receiveMsgTempTargetNodeNeighbor = append(discoverService.receiveMsgTempTargetNodeNeighbor, discoverService.receiveMsgTempNodeListWithDistance[discoverService.receiveMsgTempFoundPosition+2]["node"].(*commonModels.Node))
+	// }
+	// if discoverService.receiveMsgTempFoundPosition-2 >= 0 {
+	// 	discoverService.receiveMsgTempTargetNodeNeighbor = append(discoverService.receiveMsgTempTargetNodeNeighbor, discoverService.receiveMsgTempNodeListWithDistance[discoverService.receiveMsgTempFoundPosition-2]["node"].(*commonModels.Node))
 	// }
 
 	// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " get data")
@@ -105,31 +105,40 @@ func (discoverService *DiscoverService) HandleShareNodeNeighbor(data interface{}
 		return nil, nil
 	}
 
-	nodeNeighbors := data.(map[string]interface{})["body"].(map[string]interface{})["msgJSON"].(map[string]interface{})["nodeNeighbor"].([]interface{})
-	var seeds []*commonModels.Node = nil
+	discoverService.receiveNeighborMsgNodeNeighbors = data.(map[string]interface{})["body"].(map[string]interface{})["msgJSON"].(map[string]interface{})["nodeNeighbor"].([]interface{})
+
+	discoverService.receiveNeighborMsgSeed = make([]*commonModels.Node, 0)
 	// 循环创建新的结点变量。这个结点要直接存到bucket里面的，不能搞全局
-	for i := 0; i < len(nodeNeighbors); i++ {
+	for i := 0; i < len(discoverService.receiveNeighborMsgNodeNeighbors); i++ {
 		// 不要添加自己到种子里面
-		if discoverService.myNodeID == nodeNeighbors[i].(map[string]interface{})["nodeID"].(string) {
+		if discoverService.myNodeID == discoverService.receiveNeighborMsgNodeNeighbors[i].(map[string]interface{})["nodeID"].(string) {
 			continue
 		}
+
+		// 正在doingPong的不要重复做
+		_, discoverService.receiveNeighborMsgIsDoingPing = discoverService.pingPongCache[discoverService.receiveNeighborMsgNodeNeighbors[i].(map[string]interface{})["nodeID"].(string)]
+		if discoverService.receiveNeighborMsgIsDoingPing == true {
+			// logger.Debug("is doing ping")
+			continue
+		}
+
 		node, _ := commonModels.CreateNode(map[string]interface{}{
-			"ip":          nodeNeighbors[i].(map[string]interface{})["ip"].(string),
-			"nodeID":      nodeNeighbors[i].(map[string]interface{})["nodeID"].(string),
-			"servicePort": nodeNeighbors[i].(map[string]interface{})["servicePort"].(string),
+			"ip":          discoverService.receiveNeighborMsgNodeNeighbors[i].(map[string]interface{})["ip"].(string),
+			"nodeID":      discoverService.receiveNeighborMsgNodeNeighbors[i].(map[string]interface{})["nodeID"].(string),
+			"servicePort": discoverService.receiveNeighborMsgNodeNeighbors[i].(map[string]interface{})["servicePort"].(string),
 		})
-		seeds = append(seeds, node)
+		discoverService.receiveNeighborMsgSeed = append(discoverService.receiveNeighborMsgSeed, node)
 	}
 
-	// logger.Debug(ncService.conf.(map[string]interface{})["number"].(string) + " get seeds length : " + strconv.Itoa(len(seeds)))
+	// logger.Debug(ncService.conf.(map[string]interface{})["number"].(string) + " get seeds length : " + strconv.Itoa(len(discoverService.receiveNeighborMsgSeed)))
 
-	if len(seeds) == 0 {
+	if len(discoverService.receiveNeighborMsgSeed) == 0 {
 		return nil, nil
 	}
 
 	discoverService.myPrivateChanel["bucketOperateChanel"] <- map[string]interface{}{
 		"event": "addSeedByGroup",
-		"seeds": seeds,
+		"seeds": discoverService.receiveNeighborMsgSeed,
 	}
 
 	return nil, nil

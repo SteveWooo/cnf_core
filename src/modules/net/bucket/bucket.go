@@ -65,12 +65,26 @@ func (bucket *Bucket) HandleBucketOperate() {
 			bucket.HandleBucketNodeList()
 		}
 
+		if bucketOperate["event"] == "deleteNode" {
+			bucket.HandleDeleteNode(bucketOperate["nodeID"].(string))
+		}
+
 		if bucketOperate["event"] == "collectSeedFromConf" {
 			// 桶里如果没有东西，就要找种子源了
-			// if len(bucket.nodeCache) != 0 {
-			// 	continue
-			// }
+			if len(bucket.nodeCache) != 0 {
+				continue
+			}
 			bucket.CollectSeedFromConf()
+		}
+	}
+}
+
+// HandleDeleteNode 删除桶里的某个结点
+func (bucket *Bucket) HandleDeleteNode(nodeID string) {
+	for i := 0; i < len(bucket.nodeCache); i++ {
+		if bucket.nodeCache[i].GetNodeID() == nodeID {
+			bucket.nodeCache = append(bucket.nodeCache[:i], bucket.nodeCache[i+1:]...)
+			break
 		}
 	}
 }

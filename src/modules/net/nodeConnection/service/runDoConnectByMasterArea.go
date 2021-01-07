@@ -66,46 +66,6 @@ func (ncService *NodeConnectionService) RunFindConnectionByMasterArea(chanels ma
 	}
 }
 
-// DoFindNeighborByMasterArea 主动向周围的节点发起寻找邻居请求
-// MasterArea算法中，区域master结点只寻找其他区域master的结点
-func (ncService *NodeConnectionService) DoFindNeighborByMasterArea(findingNodeID string) {
-	// 广播所有节点，发起邻居搜索请求
-	var findNeighborPackString string
-	for i := 0; i < len(ncService.inBoundConn); i++ {
-		if ncService.inBoundConn[i] == nil || ncService.inBoundConn[i].IsShaked() == false {
-			continue
-		}
-		if len(ncService.myPublicChanel["sendNodeConnectionMsgChanel"]) == cap(ncService.myPublicChanel["sendNodeConnectionMsgChanel"]) {
-			continue
-		}
-
-		// 找上面配置好的结点
-		findNeighborPackString = ncService.GetFindNodePackString(findingNodeID, ncService.inBoundConn[i].GetNodeID())
-
-		ncService.myPublicChanel["sendNodeConnectionMsgChanel"] <- map[string]interface{}{
-			"nodeConn": ncService.inBoundConn[i],
-			"message":  findNeighborPackString,
-		}
-	}
-
-	for i := 0; i < len(ncService.outBoundConn); i++ {
-		if ncService.outBoundConn[i] == nil || ncService.outBoundConn[i].IsShaked() == false {
-			continue
-		}
-		if len(ncService.myPublicChanel["sendNodeConnectionMsgChanel"]) == cap(ncService.myPublicChanel["sendNodeConnectionMsgChanel"]) {
-			continue
-		}
-
-		// 找上面配置好的结点
-		findNeighborPackString = ncService.GetFindNodePackString(findingNodeID, ncService.outBoundConn[i].GetNodeID())
-
-		ncService.myPublicChanel["sendNodeConnectionMsgChanel"] <- map[string]interface{}{
-			"nodeConn": ncService.outBoundConn[i],
-			"message":  findNeighborPackString,
-		}
-	}
-}
-
 // DoFindConnectionByNodeListAndMasterArea 主动找可用节点
 // Master算法中，区域master结点优先与其他区域的Master结点发起连接，没有的话就与NodeList第一位发起连接。
 // 而普通结点优先与本区域的Master结点发起连接，没有Master就与区域的其他结点发起连接，本区域其他结点都没有了，就与NodeList第一位发起连接

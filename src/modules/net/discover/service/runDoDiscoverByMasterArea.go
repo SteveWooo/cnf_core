@@ -36,7 +36,7 @@ func (discoverService *DiscoverService) RunDoDiscoverByMasterArea(chanels map[st
 		}
 
 		doFindNeighborLoop++
-		if doFindNeighborLoop >= 20 {
+		if doFindNeighborLoop >= 10 {
 			doFindNeighborLoop = 0
 
 			// 区域master结点需要循环找别的区域的master结点

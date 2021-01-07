@@ -52,6 +52,14 @@ type DiscoverService struct {
 	receiveMsgTempDistanceBetweenMeAndFindingNode []int64
 	receiveMsgTempTargetNodeNeighbor              []*commonModels.Node
 
+	doFindNeighborNodeCacheListMsg map[string]interface{}
+	doFindNeighborNodeCacheList    []*commonModels.Node
+
+	receiveNeighborMsgSubNodeDistance []int64
+	receiveNeighborMsgNodeNeighbors   []interface{}
+	receiveNeighborMsgSeed            []*commonModels.Node
+	receiveNeighborMsgIsDoingPing     bool
+
 	// masterArea算法参数
 	masterAreaLocateArea int  // 代表本结点所属的区域，寻找邻居的时候，就找这个area的头头儿
 	masterAreaIsMaster   bool // 代表本结点是否该区域的master

@@ -22,7 +22,7 @@ func (ncService *NodeConnectionService) ReceiveMsg(data interface{}) (interface{
 	}
 
 	if data.(map[string]interface{})["tcpData"].(map[string]interface{})["event"] == "shakeDestroyEvent" {
-		// logger.Debug("getDestroy")
+		// logger.Debug("getDestroy" + ncService.myNodeID)
 		return ncService.HandleShakeDestroyEvent(data)
 	}
 

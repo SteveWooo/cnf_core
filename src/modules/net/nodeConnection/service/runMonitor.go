@@ -1,11 +1,5 @@
 package services
 
-import (
-	"strconv"
-
-	"github.com/cnf_core/src/utils/logger"
-)
-
 // RunMonitor 监控InBound和outBound的情况。nodeID长期为空的
 func (ncService *NodeConnectionService) RunMonitor() {
 	// 重复检查是否存在需要destroy的连接。有就从桶里删除
@@ -16,6 +10,12 @@ func (ncService *NodeConnectionService) RunMonitor() {
 
 		if ncService.inBoundConn[i].GetDestroy() == true {
 			// logger.Debug("clean inBound")
+			if len(ncService.myPrivateChanel["bucketOperateChanel"]) != cap(ncService.myPrivateChanel["bucketOperateChanel"]) {
+				ncService.myPrivateChanel["bucketOperateChanel"] <- map[string]interface{}{
+					"event":  "deleteNode",
+					"nodeID": ncService.outBoundConn[i].GetNodeID(),
+				}
+			}
 			ncService.DeleteInBoundConn(ncService.inBoundConn[i])
 		}
 	}
@@ -27,30 +27,13 @@ func (ncService *NodeConnectionService) RunMonitor() {
 
 		if ncService.outBoundConn[i].GetDestroy() == true {
 			// logger.Debug("clean outBound")
+			if len(ncService.myPrivateChanel["bucketOperateChanel"]) != cap(ncService.myPrivateChanel["bucketOperateChanel"]) {
+				ncService.myPrivateChanel["bucketOperateChanel"] <- map[string]interface{}{
+					"event":  "deleteNode",
+					"nodeID": ncService.outBoundConn[i].GetNodeID(),
+				}
+			}
 			ncService.DeleteOutBoundConn(ncService.outBoundConn[i])
 		}
-	}
-	// localNODE1: 044eb742421d2e24342983c2f6248fbe5400d855d952cdf6bd6f64117696d729a3e0fbaff48863237f510ce4645197a216b5cc2cedff17e3cef7e0d4366d7291e8
-	// socketNode1 : 043eb06ad52d601c563950c454445b0345e5fcfe5f0036b8b86aef4eb3e2825f15ddcc5ed27bd9645d710505dcb819c0fbca9dae7f612867f59364583e5ec7fbb9
-	if false {
-
-		// logger.Debug("masterInBoundConn: " + strconv.Itoa(len(ncService.masterInBoundConn)))
-		// logger.Debug("masterOutBoundConn: " + strconv.Itoa(len(ncService.masterOutBoundConn)))
-
-		inBoundCount := 0
-		for i := 0; i < len(ncService.inBoundConn); i++ {
-			if ncService.inBoundConn[i] != nil {
-				inBoundCount++
-			}
-		}
-
-		outBoundCount := 0
-		for i := 0; i < len(ncService.outBoundConn); i++ {
-			if ncService.outBoundConn[i] != nil {
-				outBoundCount++
-			}
-		}
-		logger.Debug("InBoundConn: " + strconv.Itoa(inBoundCount) + "; " + "OutBoundConn: " + strconv.Itoa(outBoundCount))
-		// logger.Debug()
 	}
 }
