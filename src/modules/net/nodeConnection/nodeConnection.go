@@ -4,6 +4,7 @@ import (
 	commonModels "github.com/cnf_core/src/modules/net/common/models"
 	nodeConnectionModels "github.com/cnf_core/src/modules/net/nodeConnection/models"
 	nodeConnectionService "github.com/cnf_core/src/modules/net/nodeConnection/service"
+	"github.com/cnf_core/src/utils/config"
 	"github.com/cnf_core/src/utils/error"
 )
 
@@ -31,9 +32,14 @@ func (nc *NodeConnection) RunService(chanels map[string]chan map[string]interfac
 
 // RunFindConnection 启动节点通信的TCP相关服务
 func (nc *NodeConnection) RunFindConnection(chanels map[string]chan map[string]interface{}) *error.Error {
-	nc.service.RunFindConnection(chanels)
-	// 启动监控，主要防止双向链接
-	// go nc.service.RunMonitor()
+	if config.GetArg("logDirname") == "mats_masterAreaKad" {
+		// master区域寻找算法
+		nc.service.RunFindConnectionByMasterArea(chanels)
+	} else {
+		// 临近寻找算法
+		nc.service.RunFindConnection(chanels)
+	}
+
 	return nil
 }
 

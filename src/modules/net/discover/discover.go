@@ -2,6 +2,7 @@ package discover
 
 import (
 	discoverService "github.com/cnf_core/src/modules/net/discover/service"
+	"github.com/cnf_core/src/utils/config"
 	"github.com/cnf_core/src/utils/error"
 )
 
@@ -29,7 +30,11 @@ func (discover *Discover) RunService(chanels map[string]chan map[string]interfac
 
 // RunDoDiscover 主动寻找种子节点或邻居节点，进行连接
 func (discover *Discover) RunDoDiscover(chanels map[string]chan map[string]interface{}) {
-	discover.service.RunDoDiscover(chanels)
+	if config.GetArg("logDirname") == "mats_masterAreaKad" {
+		discover.service.RunDoDiscoverByMasterArea(chanels)
+	} else {
+		discover.service.RunDoDiscover(chanels)
+	}
 }
 
 // ReceiveMsg 接收消息入口

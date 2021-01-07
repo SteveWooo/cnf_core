@@ -18,17 +18,11 @@ func (discoverService *DiscoverService) ReceiveMsg(data interface{}) (interface{
 	nodeID := body.(map[string]interface{})["senderNodeID"].(string)
 	sourceIP := data.(map[string]interface{})["sourceIP"].(string)
 	sourceServicePort := data.(map[string]interface{})["sourceServicePort"].(string)
-	// logger.Debug(config.ParseNodeID(discoverService.conf) + " receive : " + msg.(map[string]interface{})["type"].(string) + " from: " + nodeID)
 	// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " receive : " + msg.(map[string]interface{})["type"].(string))
-	// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " lock")
-	// discoverService.pingPongCacheLock <- true
 	// Ping case
 	if msg.(map[string]interface{})["type"] == "1" {
 		pingErr := discoverService.ReceivePing(data)
 		if pingErr != nil {
-			// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " do release")
-			// <-discoverService.pingPongCacheLock
-			// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " release")
 			return nil, pingErr
 		}
 
@@ -40,11 +34,18 @@ func (discoverService *DiscoverService) ReceiveMsg(data interface{}) (interface{
 	if msg.(map[string]interface{})["type"] == "2" {
 		pongErr := discoverService.ReceivePong(data)
 		if pongErr != nil {
-			// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " do release")
-			// <-discoverService.pingPongCacheLock
-			// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " release")
 			return nil, pongErr
 		}
+	}
+
+	// 处理寻找邻居数据包
+	if msg.(map[string]interface{})["type"] == "3" {
+		return discoverService.HandleFindNode(data)
+	}
+
+	// 处理返回邻居数据包
+	if msg.(map[string]interface{})["type"] == "4" {
+		return discoverService.HandleShareNodeNeighbor(data)
 	}
 
 	cache, existCache := discoverService.pingPongCache[nodeID]

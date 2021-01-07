@@ -2,6 +2,7 @@ package common
 
 import (
 	error "github.com/cnf_core/src/utils/error"
+	"github.com/cnf_core/src/utils/router"
 	"github.com/cnf_core/src/utils/timer"
 )
 
@@ -11,6 +12,10 @@ type Node struct {
 	ip          string
 	servicePort string
 	ts          int64
+
+	// masterArea算法
+	masterAreaLocation int
+	isAreaMaster       bool
 }
 
 // GetNodeID 反射
@@ -34,6 +39,9 @@ func CreateNode(info map[string]interface{}) (*Node, *error.Error) {
 	node.servicePort = info["servicePort"].(string)
 	node.ts = timer.Now()
 
+	// 所有结点初始化时都要计算masterArea参数
+	node.masterAreaLocation, node.isAreaMaster = router.LocateNode(node.nodeID)
+
 	return &node, nil
 }
 
@@ -45,4 +53,14 @@ func (n *Node) GetIP() string {
 // GetServicePort 反射
 func (n *Node) GetServicePort() string {
 	return n.servicePort
+}
+
+// GetMasterAreaLocation 反射
+func (n *Node) GetMasterAreaLocation() int {
+	return n.masterAreaLocation
+}
+
+// IsAreaMaster 反射
+func (n *Node) IsAreaMaster() bool {
+	return n.isAreaMaster
 }

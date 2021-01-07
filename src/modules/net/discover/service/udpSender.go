@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net"
 
+	commonModels "github.com/cnf_core/src/modules/net/common/models"
 	"github.com/cnf_core/src/utils/config"
 	"github.com/cnf_core/src/utils/error"
 	"github.com/cnf_core/src/utils/logger"
@@ -41,7 +42,7 @@ func (discoverService *DiscoverService) DoPing(targetIP string, targetServicePor
 // @param message string 数据内容
 // @param targetIP string 目标IP
 // @param targetServicePort string 目标服务端口
-func (discoverService *DiscoverService) DoSend(message string, targetIP string, targetServicePort string) interface{} {
+func (discoverService *DiscoverService) DoSend(message string, targetIP string, targetServicePort string) *error.Error {
 	if len(message) > 1024 {
 		logger.Error("发送的UDP报文超长")
 		return nil
@@ -101,7 +102,7 @@ func (discoverService *DiscoverService) Send(message string, targetIP string, ta
 }
 
 // BuildPackageBody 构建一个规范的UDP包
-func (discoverService *DiscoverService) BuildPackageBody(packType string, nodeID string) (string, interface{}) {
+func (discoverService *DiscoverService) BuildPackageBody(packType string, targetNodeID string) (string, *error.Error) {
 	conf := discoverService.conf
 	confNet := conf.(map[string]interface{})["net"]
 	now := timer.Now() // 获取毫秒时间戳
@@ -119,6 +120,71 @@ func (discoverService *DiscoverService) BuildPackageBody(packType string, nodeID
 		},
 	}
 
+	return discoverService.FormatBodyToString(msgSource, targetNodeID)
+}
+
+// GetFindNodePackString 构建一个邻居获取包
+// @param findingNodeID 需要查询的NodeID
+// @param targetNodeID 目标结点NodeID
+func (discoverService *DiscoverService) GetFindNodePackString(findingNodeID string, targetNodeID string) string {
+	conf := discoverService.conf
+	confNet := conf.(map[string]interface{})["net"]
+	now := timer.Now() // 获取毫秒时间戳
+
+	// 发现数据包的主体内容
+	msgSource := map[string]interface{}{
+		"ts":            now,
+		"type":          "3",
+		"version":       "1",
+		"findingNodeID": findingNodeID,
+		"from": map[string]interface{}{
+			"ip":        confNet.(map[string]interface{})["ip"],
+			"tcpport":   confNet.(map[string]interface{})["servicePort"],
+			"udpport":   confNet.(map[string]interface{})["servicePort"],
+			"networkid": confNet.(map[string]interface{})["networkid"],
+		},
+	}
+	bodyString, _ := discoverService.FormatBodyToString(msgSource, targetNodeID)
+	return bodyString
+}
+
+// GetshareNodeNeighborPackString 构造邻居分享包
+func (discoverService *DiscoverService) GetshareNodeNeighborPackString(neighbors []*commonModels.Node, targetNodeID string) string {
+	conf := discoverService.conf
+	confNet := conf.(map[string]interface{})["net"]
+	now := timer.Now() // 获取毫秒时间戳
+
+	// 发现数据包的主体内容
+	msgSource := map[string]interface{}{
+		"ts":           now,
+		"type":         "4",
+		"version":      "1",
+		"nodeNeighbor": make([]map[string]string, len(neighbors)),
+		"from": map[string]interface{}{
+			"ip":        confNet.(map[string]interface{})["ip"],
+			"tcpport":   confNet.(map[string]interface{})["servicePort"],
+			"udpport":   confNet.(map[string]interface{})["servicePort"],
+			"networkid": confNet.(map[string]interface{})["networkid"],
+		},
+	}
+
+	// 把结点信息一个一个加进来
+	for i := 0; i < len(neighbors); i++ {
+		msgSource["nodeNeighbor"].([]map[string]string)[i] = map[string]string{
+			"ip":          neighbors[i].GetIP(),
+			"servicePort": neighbors[i].GetServicePort(),
+			"nodeID":      neighbors[i].GetNodeID(),
+		}
+	}
+
+	bodyString, _ := discoverService.FormatBodyToString(msgSource, targetNodeID)
+	return bodyString
+}
+
+// FormatBodyToString 把带有msg的对象转换为协议数据包
+func (discoverService *DiscoverService) FormatBodyToString(msgSource map[string]interface{}, targetNodeID string) (string, *error.Error) {
+	conf := discoverService.conf
+	confNet := conf.(map[string]interface{})["net"]
 	msgJSON, msgJSONMarshalErr := json.Marshal(msgSource)
 	if msgJSONMarshalErr != nil {
 		return "", error.New(map[string]interface{}{
@@ -153,7 +219,7 @@ func (discoverService *DiscoverService) BuildPackageBody(packType string, nodeID
 		"recid":        recid,
 		"signature":    signature,
 		"senderNodeID": config.ParseNodeID(discoverService.conf),
-		"targetNodeID": nodeID,
+		"targetNodeID": targetNodeID,
 	}
 
 	bodyJSON, bodyJSONMarshalErr := json.Marshal(bodySource)

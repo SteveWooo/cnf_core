@@ -164,6 +164,11 @@ func (ncService *NodeConnectionService) HandleNodeConnectionEventChanel() {
 			continue
 		}
 
+		if eventData["event"] == "doFindNeighborByMasterArea" {
+			ncService.DoFindNeighborByMasterArea(eventData["findingNodeID"].(string))
+			continue
+		}
+
 		if eventData["event"] == "doMonitor" {
 			ncService.RunMonitor()
 			continue

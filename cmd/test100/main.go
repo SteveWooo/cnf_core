@@ -3,13 +3,15 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net"
 	_ "net/http/pprof"
+	"os"
 	"runtime"
+	"strconv"
 	"strings"
 
-	"log"
 	"net/http"
 
 	cnf "github.com/cnf_core/src"
@@ -20,20 +22,22 @@ import (
 
 func main() {
 	// 性能监控
-	go func() {
-		log.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
+	// go func() {
+	// 	log.Println(http.ListenAndServe("localhost:6060", nil))
+	// }()
 
+	// 载入一些初始配置
+	config.Load()
 	myIP := GetIP()
 	// myIP := "192.168.10.200"
 
-	COUNT := 1000
+	// 用一个大JSON来存配置
+	configJSONArray, _ := config.LoadByPath("../config/conf." + myIP + ".json")
+
+	COUNT, _ := strconv.Atoi(config.GetArg("nodeCount"))
 	// 同一个端口，才用同一套公共频道
 	publicChanels := make(map[string]interface{})
 	cnfObj := make([]*cnf.Cnf, COUNT)
-
-	// 用一个大JSON来存配置
-	configJSONArray, _ := config.LoadByPath("../config/conf." + myIP + ".json")
 
 	for i := 0; i < COUNT; i++ {
 
@@ -67,6 +71,9 @@ func main() {
 		// go cnfObj[i].Run()
 	}
 
+	// 监听实验信号
+	go HandleExamSignal()
+
 	logger.Debug("节点已经全部启动完成")
 
 	for i := 0; i < COUNT; i++ {
@@ -81,6 +88,21 @@ func main() {
 	d := <-c
 	if d {
 		return
+	}
+}
+
+// HandleExamSignal 监听实验进程发来的信号，统一使用8082http端口
+func HandleExamSignal() {
+	onExitsCallback := func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()         //解析参数，默认是不会解析的
+		fmt.Fprintf(w, "200") //这个写入到w的是输出到客户端的
+		os.Exit(0)
+	}
+
+	http.HandleFunc("/exit", onExitsCallback) //设置访问的路由
+	err := http.ListenAndServe(":8082", nil)  //设置监听的端口
+	if err != nil {
+		logger.Debug(err)
 	}
 }
 

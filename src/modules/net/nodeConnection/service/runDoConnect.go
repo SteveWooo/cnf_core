@@ -38,7 +38,7 @@ func (ncService *NodeConnectionService) RunFindConnection(chanels map[string]cha
 		}
 
 		if doFindNeighborLoop == 0 {
-			ncService.myPrivateChanel["nodeConnectionEventChanel"] <- DoFindNeighborEventMap
+			// ncService.myPrivateChanel["nodeConnectionEventChanel"] <- DoFindNeighborEventMap
 		}
 		doFindNeighborLoop++
 		if doFindNeighborLoop == 20 {

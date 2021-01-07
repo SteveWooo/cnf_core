@@ -114,5 +114,9 @@ func (discoverService *DiscoverService) HandleDiscoverEventChanel() {
 		if eventData["event"] == "processDoingPingCache" {
 			discoverService.processDoingPingCache(discoverService.myPrivateChanel)
 		}
+
+		if eventData["event"] == "doFindNeighbor" {
+			discoverService.doFindNeighbor(eventData["findingNodeID"].(string))
+		}
 	}
 }

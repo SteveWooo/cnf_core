@@ -7,9 +7,10 @@ import (
 	nodeConnectionModels "github.com/cnf_core/src/modules/net/nodeConnection/models"
 	"github.com/cnf_core/src/utils/config"
 	"github.com/cnf_core/src/utils/error"
+	"github.com/cnf_core/src/utils/router"
 )
 
-var INBOUND_CONN_MAX int = 117
+var INBOUND_CONN_MAX int = 200
 var OUTBOUND_CONN_MAX int = 8
 
 // NodeConnectionService 节点连接服务的tcp handle
@@ -49,11 +50,16 @@ type NodeConnectionService struct {
 	doConnectTempNodeList             []*commonModels.Node
 	doConnectTempNodeListWithDistance []map[string]interface{}
 	doConnectTempNewNode              *commonModels.Node
+	doConnectTempnodeListQueue        []*commonModels.Node
 
 	receiveMsgTempFoundPosition                   int
 	receiveMsgTempShareNeighborPackString         string
 	receiveMsgTempDistanceBetweenMeAndFindingNode []int64
 	receiveMsgTempTargetNodeNeighbor              []*commonModels.Node
+
+	// masterArea算法参数
+	masterAreaLocateArea int  // 代表本结点所属的区域，寻找邻居的时候，就找这个area的头头儿
+	masterAreaIsMaster   bool // 代表本结点是否该区域的master
 }
 
 // Build 节点通讯服务的初始化
@@ -61,6 +67,10 @@ func (ncService *NodeConnectionService) Build(conf interface{}, myPublicChanel m
 	ncService.conf = conf
 	ncService.myPublicChanel = myPublicChanel
 	ncService.myNodeID = config.ParseNodeID(conf)
+
+	// 初始化MasterArea算法
+	ncService.masterAreaLocateArea, ncService.masterAreaIsMaster = router.LocateNode(ncService.myNodeID)
+	// logger.Debug("nodeID: " + ncService.myNodeID + " area: " + strconv.Itoa(ncService.masterAreaLocateArea) + " is Master: " + strconv.FormatBool(ncService.masterAreaIsMaster))
 
 	confNet := conf.(map[string]interface{})["net"]
 

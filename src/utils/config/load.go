@@ -6,8 +6,7 @@ func Load() (interface{}, interface{}) {
 	loadArgs()
 
 	// 载入配置文件
-	conf, loadErr := loadConfig(GetArg("configure"))
-	return conf, loadErr
+	return nil, nil
 }
 
 // LoadByPath 通过路径载入配置

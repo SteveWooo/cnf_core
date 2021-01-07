@@ -16,25 +16,56 @@ import (
 // RunDoDiscover 主动寻找种子节点或邻居节点，进行连接
 func (discoverService *DiscoverService) RunDoDiscover(chanels map[string]chan map[string]interface{}) {
 	// 应该用一个chanel来进行这个任务
-	// go discoverService.processSeed(chanels)
-	// go discoverService.processDoingPingCache(chanels)
-	loop := 0
+	pingPongCacheloop := 0
 	processSeedEventMap := make(map[string]interface{})
 	processSeedEventMap["event"] = "processSeed"
 
 	processDoingPingCacheEventMap := make(map[string]interface{})
 	processDoingPingCacheEventMap["event"] = "processDoingPingCache"
+
+	// 主动发起邻居查询请求
+	doFindNeighborLoop := 0
+	doFindNeighborEventMap := make(map[string]interface{})
+	doFindNeighborEventMap["event"] = "doFindNeighbor"
+	doFindNeighborEventMap["findingNodeID"] = discoverService.myNodeID
+
 	for {
 		timer.Sleep(100 + rand.Intn(100))
 		discoverService.myPrivateChanel["discoverEventChanel"] <- processSeedEventMap
 
-		loop++
-		if loop >= 5 {
-			loop = 0
-			// discoverService.myPrivateChanel["processDoingPingCache"] <- map[string]interface{}{
-			// 	"event": "processDoingPingCache",
-			// }
+		pingPongCacheloop++
+		if pingPongCacheloop >= 100 {
+			pingPongCacheloop = 0
+			discoverService.myPrivateChanel["discoverEventChanel"] <- processDoingPingCacheEventMap
 		}
+
+		doFindNeighborLoop++
+		if doFindNeighborLoop >= 20 {
+			doFindNeighborLoop = 0
+			discoverService.myPrivateChanel["discoverEventChanel"] <- doFindNeighborEventMap
+		}
+	}
+}
+
+// doFindNeighbor 发起找邻居请求
+func (discoverService *DiscoverService) doFindNeighbor(findingNodeID string) {
+	// 拿结点桶里的nodeCache来发
+	if len(discoverService.myPrivateChanel["bucketNodeListChanel"]) == 0 {
+		return
+	}
+	nodeCacheListMsg := <-discoverService.myPrivateChanel["bucketNodeListChanel"]
+	nodeCacheList := nodeCacheListMsg["nodeList"].([]*commonModels.Node)
+
+	var findNeighborPackString string
+	for i := 0; i < len(nodeCacheList); i++ {
+		if len(discoverService.myPublicChanel["sendDiscoverMsgChanel"]) == cap(discoverService.myPublicChanel["sendDiscoverMsgChanel"]) {
+			continue
+		}
+
+		// 找上面配置好的结点
+		findNeighborPackString = discoverService.GetFindNodePackString(findingNodeID, nodeCacheList[i].GetNodeID())
+
+		discoverService.DoSend(findNeighborPackString, nodeCacheList[i].GetIP(), nodeCacheList[i].GetServicePort())
 	}
 }
 
