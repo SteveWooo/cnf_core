@@ -71,9 +71,9 @@ func (discoverService *DiscoverService) HandleFindNode(data interface{}) (interf
 	if discoverService.receiveMsgTempFoundPosition+1 < len(discoverService.receiveMsgTempNodeListWithDistance) {
 		discoverService.receiveMsgTempTargetNodeNeighbor = append(discoverService.receiveMsgTempTargetNodeNeighbor, discoverService.receiveMsgTempNodeListWithDistance[discoverService.receiveMsgTempFoundPosition+1]["node"].(*commonModels.Node))
 	}
-	// if discoverService.receiveMsgTempFoundPosition-1 >= 0 {
-	// 	discoverService.receiveMsgTempTargetNodeNeighbor = append(discoverService.receiveMsgTempTargetNodeNeighbor, discoverService.receiveMsgTempNodeListWithDistance[discoverService.receiveMsgTempFoundPosition-1]["node"].(*commonModels.Node))
-	// }
+	if discoverService.receiveMsgTempFoundPosition-1 >= 0 {
+		discoverService.receiveMsgTempTargetNodeNeighbor = append(discoverService.receiveMsgTempTargetNodeNeighbor, discoverService.receiveMsgTempNodeListWithDistance[discoverService.receiveMsgTempFoundPosition-1]["node"].(*commonModels.Node))
+	}
 	// if discoverService.receiveMsgTempFoundPosition+2 < len(discoverService.receiveMsgTempNodeListWithDistance) {
 	// 	discoverService.receiveMsgTempTargetNodeNeighbor = append(discoverService.receiveMsgTempTargetNodeNeighbor, discoverService.receiveMsgTempNodeListWithDistance[discoverService.receiveMsgTempFoundPosition+2]["node"].(*commonModels.Node))
 	// }
@@ -102,6 +102,7 @@ func (discoverService *DiscoverService) HandleShareNodeNeighbor(data interface{}
 	}
 
 	if len(discoverService.myPrivateChanel["bucketOperateChanel"]) == cap(discoverService.myPrivateChanel["bucketOperateChanel"]) {
+		// logger.Debug("桶满")
 		return nil, nil
 	}
 
@@ -130,7 +131,7 @@ func (discoverService *DiscoverService) HandleShareNodeNeighbor(data interface{}
 		discoverService.receiveNeighborMsgSeed = append(discoverService.receiveNeighborMsgSeed, node)
 	}
 
-	// logger.Debug(ncService.conf.(map[string]interface{})["number"].(string) + " get seeds length : " + strconv.Itoa(len(discoverService.receiveNeighborMsgSeed)))
+	// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + " get seeds length : " + strconv.Itoa(len(discoverService.receiveNeighborMsgSeed)))
 
 	if len(discoverService.receiveNeighborMsgSeed) == 0 {
 		return nil, nil

@@ -23,7 +23,8 @@ func (ncService *NodeConnectionService) RunFindConnection(chanels map[string]cha
 	doFindConnLoop := 0
 	runDoMonitorLoop := 0
 	for {
-		timer.Sleep(100 + rand.Intn(100))
+		// timer.Sleep(100 + rand.Intn(100))
+		timer.Sleep(2000 + rand.Intn(2000))
 
 		if doFindConnLoop == 0 {
 			ncService.myPrivateChanel["nodeConnectionEventChanel"] <- DoFindConnectionByNodeListEventMap
@@ -74,7 +75,7 @@ func (ncService *NodeConnectionService) DoFindConnectionByNodeList(chanels map[s
 	// 端口多路复用逻辑 Master节点会调用以下函数 MasterDoTryOutBoundConnect
 	ncService.myPublicChanel["submitNodeConnectionCreateChanel"] <- map[string]interface{}{
 		"newNode":         ncService.doConnectTempNewNode, // 包含了ip:port:nodeID
-		"targetNodeID":    config.ParseNodeID(ncService.conf),
+		"targetNodeID":    ncService.myNodeID,
 		"shakePackString": ncService.GetShakePackString("outBound", ncService.doConnectTempNewNode.GetNodeID()),
 	}
 }

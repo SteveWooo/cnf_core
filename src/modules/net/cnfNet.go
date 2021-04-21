@@ -84,14 +84,14 @@ func (cnfNet *CnfNet) doRun() interface{} {
 	// 这只有Master节点才用到
 	confNet := cnfNet.conf.(map[string]interface{})["net"]
 	if confNet.(map[string]interface{})["masterServer"] == "true" {
-		cnfNet.myPrivateChanel["receiveDiscoverMsgChanel"] = make(chan map[string]interface{}, 100)       // 管理udp socket中获取到消息的chanel
-		cnfNet.myPrivateChanel["receiveNodeConnectionMsgChanel"] = make(chan map[string]interface{}, 100) // 管理tcp socket中获取到消息的chanel
+		cnfNet.myPrivateChanel["receiveDiscoverMsgChanel"] = make(chan map[string]interface{}, 1000)       // 管理udp socket中获取到消息的chanel
+		cnfNet.myPrivateChanel["receiveNodeConnectionMsgChanel"] = make(chan map[string]interface{}, 1000) // 管理tcp socket中获取到消息的chanel
 	}
 
 	// 非master节点都能用到
-	cnfNet.myPrivateChanel["bucketSeedChanel"] = make(chan map[string]interface{}, 1)     // bucket服务往这个通道输送邻居节点、种子，给doDiscover服务用
-	cnfNet.myPrivateChanel["bucketNodeChanel"] = make(chan map[string]interface{}, 1)     // bucket服务往这个通道输送可用节点，给tcp服务尝试连接。
-	cnfNet.myPrivateChanel["bucketNodeListChanel"] = make(chan map[string]interface{}, 4) // bucket服务对外输出整个缓存列表，由于findNeighbor和doConn都需要用到这个，缓存稍微多几个
+	cnfNet.myPrivateChanel["bucketSeedChanel"] = make(chan map[string]interface{}, 2)      // bucket服务往这个通道输送邻居节点、种子，给doDiscover服务用
+	cnfNet.myPrivateChanel["bucketNodeChanel"] = make(chan map[string]interface{}, 2)      // bucket服务往这个通道输送可用节点，给tcp服务尝试连接。
+	cnfNet.myPrivateChanel["bucketNodeListChanel"] = make(chan map[string]interface{}, 40) // bucket服务对外输出整个缓存列表，由于findNeighbor和doConn都需要用到这个，缓存稍微多几个
 
 	// 给发现服务上任务队列的chanel
 	cnfNet.myPrivateChanel["discoverEventChanel"] = make(chan map[string]interface{}, 10)       // 发现服务的消息队列

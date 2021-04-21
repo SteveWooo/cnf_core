@@ -72,7 +72,7 @@ func (cnf *Cnf) initPublicChanel(chanelLength int) {
 	cnf.myPublicChanel["sendDiscoverMsgChanel"] = make(chan map[string]interface{}, chanelLength)    // 要发送udp数据，扔这里
 
 	// 关于tcp连接创建的
-	cnf.myPublicChanel["submitNodeConnectionCreateChanel"] = make(chan map[string]interface{}, 10)   // 子节点需要创建TCP连接的话，子节点就往这里扔一个请求
+	cnf.myPublicChanel["submitNodeConnectionCreateChanel"] = make(chan map[string]interface{}, 100)  // 子节点需要创建TCP连接的话，子节点就往这里扔一个请求
 	cnf.myPublicChanel["receiveNodeConnectionCreateChanel"] = make(chan map[string]interface{}, 117) // 主节点创建连接成功，并握手成功的，就把conn对象扔回这个chanel里面
 
 	// 关于tcp数据包的

@@ -88,6 +88,7 @@ func (cnfNet *CnfNet) DoLogChanel() {
 		logBody["nodeID"] = config.ParseNodeID(cnfNet.conf)
 		logBody["netStatus"] = netStatus
 		logBody["number"] = cnfNet.conf.(map[string]interface{})["number"]
+
 		cnfNet.myPublicChanel["logChanel"] <- logBody
 	}
 }

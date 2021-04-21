@@ -118,6 +118,7 @@ func (bucket *Bucket) HandleBucketSeed() {
 func (bucket *Bucket) HandleBucketNodeList() {
 	// 满了就不要阻塞队列了
 	if len(bucket.myPrivateChanel["bucketNodeListChanel"]) == cap(bucket.myPrivateChanel["bucketNodeListChanel"]) {
+		// logger.Debug(bucket.conf.(map[string]interface{})["number"].(string) + "bucketNodeListChanel 队列满了")
 		return
 	}
 
@@ -126,6 +127,7 @@ func (bucket *Bucket) HandleBucketNodeList() {
 	if len(bucket.bucketTempNodeListWithDistance) == 0 {
 		return
 	}
+	// logger.Debug(bucket.conf.(map[string]interface{})["number"].(string) + "获取临近结点成功：" + strconv.Itoa(len(bucket.myPrivateChanel["bucketNodeListChanel"])) + " nodeCache length: " + strconv.Itoa(len(bucket.nodeCache)) + " seedLength: " + strconv.Itoa(len(bucket.seed)))
 	bucket.myPrivateChanel["bucketNodeListChanel"] <- map[string]interface{}{
 		"nodeList":             bucket.bucketTempNodeList,
 		"nodeListWithDistance": bucket.bucketTempNodeListWithDistance,

@@ -30,19 +30,20 @@ func (discoverService *DiscoverService) RunDoDiscover(chanels map[string]chan ma
 	doFindNeighborEventMap["findingNodeID"] = discoverService.myNodeID
 
 	for {
-		timer.Sleep(100 + rand.Intn(100))
+		// timer.Sleep(100 + rand.Intn(100))
+		timer.Sleep(2000 + rand.Intn(2000))
 		discoverService.myPrivateChanel["discoverEventChanel"] <- processSeedEventMap
 
 		pingPongCacheloop++
 		if pingPongCacheloop >= 100 {
 			pingPongCacheloop = 0
-			discoverService.myPrivateChanel["discoverEventChanel"] <- processDoingPingCacheEventMap
+			// discoverService.myPrivateChanel["discoverEventChanel"] <- processDoingPingCacheEventMap
 		}
 
 		doFindNeighborLoop++
-		if doFindNeighborLoop >= 10 {
+		if doFindNeighborLoop >= 50 {
 			doFindNeighborLoop = 0
-			discoverService.myPrivateChanel["discoverEventChanel"] <- doFindNeighborEventMap
+			// discoverService.myPrivateChanel["discoverEventChanel"] <- doFindNeighborEventMap
 		}
 	}
 }
@@ -51,6 +52,7 @@ func (discoverService *DiscoverService) RunDoDiscover(chanels map[string]chan ma
 func (discoverService *DiscoverService) doFindNeighbor(findingNodeID string) {
 	// 拿结点桶里的nodeCache来发
 	if len(discoverService.myPrivateChanel["bucketNodeListChanel"]) == 0 {
+		// logger.Debug(discoverService.conf.(map[string]interface{})["number"].(string) + "桶里无结点可用：" + strconv.Itoa(len(discoverService.myPrivateChanel["bucketNodeListChanel"])))
 		return
 	}
 	discoverService.doFindNeighborNodeCacheListMsg = <-discoverService.myPrivateChanel["bucketNodeListChanel"]

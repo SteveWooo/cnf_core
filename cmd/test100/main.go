@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	_ "net/http/pprof"
 	"os"
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"net/http"
 
@@ -22,19 +24,29 @@ import (
 
 func main() {
 	// 性能监控
-	// go func() {
-	// 	log.Println(http.ListenAndServe("localhost:6060", nil))
-	// }()
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
 
 	// 载入一些初始配置
 	config.Load()
 	myIP := GetIP()
+	for {
+		if myIP == "" {
+			myIP = GetIP()
+			continue
+		}
+		break
+	}
 	// myIP := "192.168.10.200"
 
 	COUNT, _ := strconv.Atoi(config.GetArg("nodeCount"))
 
 	// 用一个大JSON来存配置
 	configJSONArray, _ := config.LoadByPath("../config/conf." + myIP + "-" + strconv.Itoa(COUNT) + ".json")
+
+	// 少结点测试用
+	// configJSONArray, _ := config.LoadByPath("../config/conf." + myIP + ".json")
 
 	// 同一个端口，才用同一套公共频道
 	publicChanels := make(map[string]interface{})
@@ -107,6 +119,45 @@ func HandleExamSignal() {
 	}
 }
 
+func getCPUSample() (idle, total uint64) {
+	contents, err := ioutil.ReadFile("/proc/stat")
+	if err != nil {
+		return
+	}
+	lines := strings.Split(string(contents), "\n")
+	for _, line := range lines {
+		fields := strings.Fields(line)
+		if fields[0] == "cpu" {
+			numFields := len(fields)
+			for i := 1; i < numFields; i++ {
+				val, err := strconv.ParseUint(fields[i], 10, 64)
+				if err != nil {
+					fmt.Println("Error: ", i, fields[i], err)
+				}
+				total += val // tally up all the numbers to get total ticks
+				if i == 4 {  // idle is the 5th field in the cpu line
+					idle = val
+				}
+			}
+			return
+		}
+	}
+	return
+}
+
+func getCPUUsage() float64 {
+	idle0, total0 := getCPUSample()
+	time.Sleep(3 * time.Second)
+	idle1, total1 := getCPUSample()
+
+	idleTicks := float64(idle1 - idle0)
+	totalTicks := float64(total1 - total0)
+	cpuUsage := 100 * (totalTicks - idleTicks) / totalTicks
+
+	// fmt.Printf("CPU usage is %f%% [busy: %f, total: %f]\n", cpuUsage, totalTicks-idleTicks, totalTicks)
+	return cpuUsage
+}
+
 // HandleChanelLog 管理子节点的所有日志
 func HandleChanelLog(publicChanels map[string]interface{}) {
 	logDataLock := make(chan bool, 1)
@@ -131,13 +182,23 @@ func HandleChanelLog(publicChanels map[string]interface{}) {
 
 	// 定时发送日志
 	client := &http.Client{}
+	// 日志要带点系统信息
+	var m runtime.MemStats
+	var httpBodySource map[string]interface{}
 	for {
 		timer.Sleep(1000)
 		logDataLock <- true
-		httpBodyJSON, _ := json.Marshal(logData)
+		runtime.ReadMemStats(&m)
+		httpBodySource = map[string]interface{}{
+			"osMem":      m.Sys / 1024 / 1024,
+			"osCPUUsage": getCPUUsage(),
+			"nodes":      logData,
+		}
+
+		httpBodyJSON, _ := json.Marshal(httpBodySource)
 		<-logDataLock
-		// req, _ := http.NewRequest("POST", "http://192.168.10.200:8081/api/update_node_status", bytes.NewReader(httpBodyJSON))
-		req, _ := http.NewRequest("POST", "http://192.168.31.164:8081/api/update_node_status", bytes.NewReader(httpBodyJSON))
+		req, _ := http.NewRequest("POST", "http://192.168.10.201:8081/api/update_node_status", bytes.NewReader(httpBodyJSON))
+		// req, _ := http.NewRequest("POST", "http://192.168.31.164:8081/api/update_node_status", bytes.NewReader(httpBodyJSON))
 		resp, doErr := client.Do(req)
 		if doErr != nil {
 			// logger.Debug(doErr)
