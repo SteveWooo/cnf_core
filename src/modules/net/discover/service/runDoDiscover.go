@@ -28,7 +28,6 @@ func (discoverService *DiscoverService) RunDoDiscover(chanels map[string]chan ma
 	doFindNeighborEventMap := make(map[string]interface{})
 	doFindNeighborEventMap["event"] = "doFindNeighbor"
 	doFindNeighborEventMap["findingNodeID"] = discoverService.myNodeID
-
 	for {
 		// timer.Sleep(100 + rand.Intn(100))
 		timer.Sleep(2000 + rand.Intn(2000))
